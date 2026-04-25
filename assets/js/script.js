@@ -2208,8 +2208,7 @@ function downloadTemplate(format) {
  */
 async function sendLead(data, uiElement, resultsDiv) {
     try {
-        console.log(data);
-        /*const response = await fetch("https://baziAiesec.pythonanywhere.com/adicionar-card", {
+        const response = await fetch("https://baziAiesec.pythonanywhere.com/adicionar-card-b2c", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -2219,8 +2218,6 @@ async function sendLead(data, uiElement, resultsDiv) {
             const errorData = await response.text();
             throw new Error(`HTTP ${response.status}: ${errorData}`);
         }
-
-        await response.json();*/
         if (uiElement) uiElement.style.backgroundColor = '#d4edda'; // Sucesso
         resultsDiv.innerHTML += `<div class="success">Sucesso: Lead ${data.email} cadastrado.</div>`;
     } catch (error) {
