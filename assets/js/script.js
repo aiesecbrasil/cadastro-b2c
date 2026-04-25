@@ -1484,11 +1484,12 @@ async function enviarFormularioObrigatorio() {
                 // Use the global selectedId variáveis
                 nome,
                 sobrenome,
+                nomeCl:nomeCl || selectedCommitteeText,
                 emails: emailsEnvio,
                 telefones: telefonesEnvio,
                 dataNascimento: inputISO.value,
                 idProduto: selectedProductId,
-                idComite: nomeCL == "MC BAZI" ? 39 : selectedCommitteeId,
+                idComite: CCL == "MC BAZI" ? 39 : selectedCommitteeId,
                 idCategoria: selectedAdSourceId,
                 idAutorizacao: "1",
                 tag: slugify(tagValue)
