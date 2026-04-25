@@ -1496,7 +1496,7 @@ async function enviarFormularioObrigatorio() {
             };
             
             try {
-                /*const response = await fetch("https://baziAiesec.pythonanywhere.com/adicionar-card", {
+                const response = await fetch("https://baziAiesec.pythonanywhere.com/adicionar-card-b2c", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(data),
@@ -1508,11 +1508,7 @@ async function enviarFormularioObrigatorio() {
                     throw { status: response.status, backend };
                 }
 
-                const result = await response.json();
-                itemID = result.data?.item_id || 0;
-
-                itemID = itemID || 0;*/
-                console.log(data)
+                
                 esconderSpinner();
                 showModal({
                     title: "Dados enviados com sucesso!",
