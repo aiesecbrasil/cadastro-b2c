@@ -267,6 +267,13 @@ h2 {
     background-color: transparent; /* Para melhor integração visual com a célula */
 }
 
+/* Restaura a aparência dos inputs de combo dentro da tabela de massa */
+#bulk-leads-table .combo input {
+    border: 1px solid #ccd6eb;
+    background-color: #fff;
+    padding: 10px; /* Alinha com outros inputs do formulário */
+}
+
 /* Estilos para o modo de upload de arquivo */
 #upload-instructions {
     background-color: #e9f7fe;

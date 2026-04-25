@@ -1315,12 +1315,22 @@ function validarDadosObrigatorios() {
         valido = false;
     } else clearErro('erro-produto');
 
+    // AIESEC / Comitê
+    const aiesecHidden = document.getElementById('aiesecs')?.value;
+    // A `selectedCommitteeId` pode ser pré-definida por UTM
+    if (!aiesecHidden && !selectedCommitteeId) {
+        setErro('erro-aiesec', 'Selecione o comitê.');
+        camposErro.push('Comitê não selecionado.');
+        valido = false;
+    } else {
+        clearErro('erro-aiesec');
+    }
 
     // Como conheceu
     const conheceuHidden = document.getElementById('conheceu')?.value;
     if (!conheceuHidden && !selectedAdSourceId) {
         setErro('erro-conheceu', 'Selecione ou digite como você conheceu a AIESEC.');
-        camposErro.push('Como conheceu é obrigatório.');
+        camposErro.push('Como conheceu não selecionado.');
         valido = false;
     } else {
         clearErro('erro-conheceu');
@@ -1398,27 +1408,17 @@ async function enviarFormularioObrigatorio() {
         }
 
         const produtoSlug = getSelectedProductSlug();
-        const codigoUniversidade = produtoSlug === 'gv' ? 'ogv' : 'ogt';
-        const universidadeInput = document.getElementById('combo-input-universidades')?.value?.trim() || document.getElementById('universidade')?.value?.trim();
-        const semUniversidade = document.getElementById('sem-universidade')?.checked || false;
         const aiesecTexto = document.getElementById('combo-input-aiesec')?.value?.trim() || '';
         const conheceuTexto = document.getElementById('combo-input-conheceu')?.value?.trim() || '';
-        const nomeCLUniversidade = getNomeCLFromUniversidade(universidadeInput, produtoSlug);
         const divisaoMercado = (selectedProductId == 1) ? divisaoMercadoGV : divisaoMercadoGT;
-        const nomeCL = nomeCLUniversidade || aiesecTexto || divisaoMercado[selectedCommitteeText.toLowerCase()] || selectedCommitteeText;
+        const nomeCL = aiesecTexto || divisaoMercado[selectedCommitteeText?.toLowerCase()] || selectedCommitteeText;
         const comiteMatch = todasAiesecs.find(opcao =>
-            opcao.text.toLowerCase().includes(nomeCL.toLowerCase())
+            opcao.text.toLowerCase().includes(nomeCL?.toLowerCase())
         );
 
         const idComiteParaPodio = comiteMatch ? comiteMatch.id : 39;
         selectedCommitteeId = idComiteParaPodio;
-        if (nomeCLUniversidade) {
-            const committeeIdMapeado = getAiesecIdFromNome(nomeCLUniversidade);
-            if (committeeIdMapeado) {
-                selectedCommitteeId = committeeIdMapeado;
-                selectedCommitteeText = nomeCLUniversidade;
-            }
-        }
+        
 
         if (aiesecTexto) {
             const committeeIdMapeado = getAiesecIdFromNome(divisaoMercado[aiesecTexto.replace("AIESEC em ", "").replace("AIESEC no ", "").toLowerCase()]);
@@ -1433,12 +1433,7 @@ async function enviarFormularioObrigatorio() {
             selectedCommitteeText = document.getElementById('combo-input-aiesec')?.value?.trim() || selectedCommitteeText;
         }
 
-        if (!semUniversidade && document.getElementById('sem-universidade')) {
-            dados += `<strong>Universidade</strong>: ${universidadeInput || 'Não informada'}<br>`;
-        } else if (semUniversidade && document.getElementById('sem-universidade')) {
-            const universidadeTextoAvulso = universidadeInput ? `${universidadeInput} (não listada)` : 'Não está cursando ou não está listada';
-            dados += `<strong>Universidade</strong>: ${universidadeTextoAvulso}<br>`;
-        }
+        
         if (aiesecTexto) {
             dados += `<strong>AiESEC mais próxima</strong>: ${nomeCL || selectedCommitteeText}<br>`;
         }
@@ -1481,7 +1476,7 @@ async function enviarFormularioObrigatorio() {
             // Aguarda o modal terminar de fechar
             await esperarModalFechar(modal);
 
-            const tagValue = document.getElementById('tag')?.value?.trim() || slugify(parametros.campanha);
+            const tagValue = slugify(document.getElementById('tag')?.value?.trim());
 
             const mapeamentoProgramas = { 1: 7, 3: 8, 6: 8, 4: 9 };
 
@@ -1500,7 +1495,7 @@ async function enviarFormularioObrigatorio() {
             };
             
             try {
-                const response = await fetch("https://baziAiesec.pythonanywhere.com/adicionar-card", {
+                /*const response = await fetch("https://baziAiesec.pythonanywhere.com/adicionar-card", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(data),
@@ -1515,7 +1510,8 @@ async function enviarFormularioObrigatorio() {
                 const result = await response.json();
                 itemID = result.data?.item_id || 0;
 
-                itemID = itemID || 0;
+                itemID = itemID || 0;*/
+                console.log(data)
                 esconderSpinner();
                 showModal({
                     title: "Dados enviados com sucesso!",
@@ -1525,19 +1521,8 @@ async function enviarFormularioObrigatorio() {
                     showCancel: false,
                     confirmText: "Ok",
                     onConfirm: () => {
-                        resolve(true)
-                    }
-                });
-                esconderSpinner();
-                showModal({
-                    title: "Dados enviados com sucesso!",
-                    message:
-                        `Lead Cadastrado com sucesso`,
-                    type: "success",
-                    showCancel: false,
-                    confirmText: "Ok",
-                    onConfirm: () => {
-                        resolve(true)
+                        resolve(true);
+                        document.getElementById("meuForm").reset();
                     }
                 });
             } catch (err) {
@@ -1717,9 +1702,16 @@ function toggleStageInputs(activeIndex) {
 
 
 btnNext.addEventListener("click", async () => {
+    // Primeiro, valida. A função retorna true se válido, ou mostra um modal e retorna um objeto se inválido.
+    const isFormValid = validarDadosObrigatorios();
+    if (isFormValid !== true) {
+        return; // Para se a validação falhar (o modal já foi exibido)
+    }
+
+    // Se for válido, prossegue para mostrar o modal de confirmação e enviar.
     const ok = await enviarFormularioObrigatorio();
     if (!ok) return;
-})
+});
 
 function esperarModalFechar(modal) {
     return new Promise(resolve => {
@@ -1736,6 +1728,8 @@ function esperarModalFechar(modal) {
         showStage(currentStage - 1);
     }
 });*/
+
+let bulkRowCounter = 0;
 
 /**
  * Inicializa o painel de Cadastro em Massa, criando a tabela e os botões.
@@ -1784,20 +1778,70 @@ function addBulkLeadRow() {
     const tbody = document.querySelector('#bulk-leads-table tbody');
     if (!tbody) return;
 
+    const rowId = bulkRowCounter++;
     const row = document.createElement('tr');
     row.innerHTML = `
         <td><input type="text" class="bulk-nome" placeholder="Nome"></td>
         <td><input type="text" class="bulk-sobrenome" placeholder="Sobrenome"></td>
         <td><input type="email" class="bulk-email" placeholder="email@exemplo.com"></td>
-        <td><input type="tel" class="bulk-telefone" placeholder="11987654321"></td>
+        <td><input type="tel" class="bulk-telefone" placeholder="(11) 98765-4321"></td>
         <td><input type="text" class="bulk-nascimento" placeholder="DD/MM/YYYY"></td>
-        <td><input type="text" class="bulk-produto" placeholder="Ex: Voluntário Global"></td>
-        <td><input type="text" class="bulk-comite" placeholder="Ex: AIESEC em Salvador"></td>
-        <td><input type="text" class="bulk-como-conheceu" placeholder="Ex: Instagram"></td>
+        <td class="produto-cell"></td>
+        <td class="comite-cell"></td>
+        <td class="como-conheceu-cell"></td>
         <td><input type="text" class="bulk-tag" placeholder="Tag (opcional)"></td>
         <td><button type="button" class="remove-btn" onclick="this.closest('tr').remove()">✖</button></td>
     `;
     tbody.appendChild(row);
+
+    // Aplica máscaras aos novos inputs para melhor UX
+    const telInput = row.querySelector('.bulk-telefone');
+    if (telInput) {
+        aplicarMascaraTelefone(telInput);
+    }
+
+    const nascInput = row.querySelector('.bulk-nascimento');
+    if (nascInput) {
+        nascInput.addEventListener('input', () => {
+            let valor = nascInput.value.replace(/\D/g, '');
+            if (valor.length > 8) valor = valor.substring(0, 8);
+
+            if (valor.length > 2 && valor.length <= 4) {
+                valor = valor.substring(0, 2) + '/' + valor.substring(2);
+            } else if (valor.length > 4) {
+                valor = valor.substring(0, 2) + '/' + valor.substring(2, 4) + '/' + valor.substring(4, 8);
+            }
+            nascInput.value = valor;
+        });
+    }
+
+    // Constrói os combos nas suas respectivas células
+    buildCombo({
+        container: row.querySelector('.produto-cell'),
+        inputId: `bulk-produto-input-${rowId}`,
+        listId: `bulk-produto-list-${rowId}`,
+        hiddenId: `bulk-produto-hidden-${rowId}`,
+        placeholder: 'Selecione',
+        options: todosProdutos,
+    });
+
+    buildCombo({
+        container: row.querySelector('.comite-cell'),
+        inputId: `bulk-comite-input-${rowId}`,
+        listId: `bulk-comite-list-${rowId}`,
+        hiddenId: `bulk-comite-hidden-${rowId}`,
+        placeholder: 'Selecione',
+        options: todasAiesecs,
+    });
+
+    buildCombo({
+        container: row.querySelector('.como-conheceu-cell'),
+        inputId: `bulk-como-conheceu-input-${rowId}`,
+        listId: `bulk-como-conheceu-list-${rowId}`,
+        hiddenId: `bulk-como-conheceu-hidden-${rowId}`,
+        placeholder: 'Selecione',
+        options: todasOpcoes_Como_Conheceu,
+    });
 }
 
 /**
@@ -1806,20 +1850,62 @@ function addBulkLeadRow() {
 async function submitBulkLeads() {
     const uiRows = document.querySelectorAll('#bulk-leads-table tbody tr');
     const submitBtn = document.getElementById('submit-bulk-leads');
+    const resultsDiv = document.getElementById('bulk-results');
+
+    // Reseta a UI antes de processar
+    resultsDiv.innerHTML = '';
+    uiRows.forEach(row => row.style.backgroundColor = '');
+
     submitBtn.disabled = true;
 
-    const leads = Array.from(uiRows).map(row => ({
-        nome: row.querySelector('.bulk-nome').value.trim(),
-        sobrenome: row.querySelector('.bulk-sobrenome').value.trim(),
-        email: row.querySelector('.bulk-email').value.trim(),
-        telefone: row.querySelector('.bulk-telefone').value.trim(),
-        nascimento: row.querySelector('.bulk-nascimento').value.trim(),
-        produto: row.querySelector('.bulk-produto').value.trim(),
-        comite: row.querySelector('.bulk-comite').value.trim(),
-        como_conheceu: row.querySelector('.bulk-como-conheceu').value.trim(),
-        tag: row.querySelector('.bulk-tag').value.trim(),
-        uiElement: row // Mantém referência à linha da tabela para feedback visual
-    }));
+    const leads = [];
+    const allValidationErrors = [];
+
+    // Validação prévia para campos vazios
+    uiRows.forEach((row, index) => {
+        const leadData = {
+            nome: row.querySelector('.bulk-nome').value.trim(),
+            sobrenome: row.querySelector('.bulk-sobrenome').value.trim(),
+            email: row.querySelector('.bulk-email').value.trim(),
+            telefone: row.querySelector('.bulk-telefone').value.trim(),
+            nascimento: row.querySelector('.bulk-nascimento').value.trim(),
+            idProduto: row.querySelector('.produto-cell input[type="hidden"]').value,
+            idComite: row.querySelector('.comite-cell input[type="hidden"]').value,
+            idCategoria: row.querySelector('.como-conheceu-cell input[type="hidden"]').value,
+            tag: row.querySelector('.bulk-tag').value.trim(),
+            uiElement: row
+        };
+
+        const rowErrors = [];
+        if (!leadData.nome) rowErrors.push('Nome');
+        if (!leadData.sobrenome) rowErrors.push('Sobrenome');
+        if (!leadData.email) rowErrors.push('Email');
+        if (!leadData.telefone) rowErrors.push('Telefone');
+        if (!leadData.nascimento) rowErrors.push('Nascimento');
+        if (!leadData.idProduto) rowErrors.push('Produto');
+        if (!leadData.idComite) rowErrors.push('Comitê');
+        if (!leadData.idCategoria) rowErrors.push('Como Conheceu');
+
+        if (rowErrors.length > 0) {
+            allValidationErrors.push(`Linha ${index + 1}: Faltando ${rowErrors.join(', ')}.`);
+            row.style.backgroundColor = '#f8d7da'; // Destaca a linha com erro
+        }
+
+        leads.push(leadData);
+    });
+
+    if (allValidationErrors.length > 0) {
+        showModal({
+            title: 'Campos Obrigatórios Não Preenchidos',
+            message: ['Por favor, corrija os erros nas linhas destacadas antes de continuar.', ...allValidationErrors],
+            type: 'error',
+            showConfirm: false,
+            showCancel: true,
+            cancelText: 'Corrigir'
+        });
+        submitBtn.disabled = false;
+        return; // Aborta o envio
+    }
 
     await processAndSendLeads(leads, 'bulk-results');
 
@@ -1845,46 +1931,85 @@ async function processAndSendLeads(leads, resultsDivId) {
     };
 
     for (const lead of leads) {
-        const { uiElement, nome, sobrenome, email, telefone, nascimento, produto, comite, como_conheceu, tag } = lead;
+        const { uiElement, nome, sobrenome, email, telefone, nascimento, produto, comite, como_conheceu, tag, idProduto, idComite, idCategoria } = lead;
 
-        // Validação básica de campos obrigatórios
-        if (!nome || !sobrenome || !email || !telefone || !nascimento || !produto || !comite || !como_conheceu) {
+        // Reseta o estilo da linha
+        if (uiElement) uiElement.style.backgroundColor = '';
+
+        const validationErrors = [];
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}$/;
+        const dataRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+
+        // 1. Valida todos os campos obrigatórios
+        if (!nome) validationErrors.push('Nome é obrigatório.');
+        if (!sobrenome) validationErrors.push('Sobrenome é obrigatório.');
+        if (!email) {
+            validationErrors.push('Email é obrigatório.');
+        } else if (!emailRegex.test(email)) {
+            validationErrors.push('Email com formato inválido.');
+        }
+        const telNumeros = telefone.replace(/\D/g, '');
+        if (telNumeros.length < 10 || telNumeros.length > 11) {
+            validationErrors.push('Telefone inválido (deve ter 10 ou 11 dígitos).');
+        }
+        if (!nascimento) {
+            validationErrors.push('Nascimento é obrigatório.');
+        } else if (!dataRegex.test(nascimento)) {
+            validationErrors.push('Data de nascimento inválida (use DD/MM/YYYY).');
+        }
+
+        // 2. Valida e resolve IDs para formulário em massa (tem ID) e upload de arquivo (tem texto)
+        let finalIdProduto, finalIdComite, finalIdCategoria;
+
+        if (idProduto) {
+            finalIdProduto = idProduto;
+        } else if (produto) {
+            const result = findIdByText(produto, todosProdutos, 'Produto');
+            if (result.error) validationErrors.push(result.error); else finalIdProduto = result.id;
+        } else {
+            validationErrors.push('Produto é obrigatório.');
+        }
+
+        if (idComite) {
+            finalIdComite = idComite;
+        } else if (comite) {
+            const result = findIdByText(comite, todasAiesecs, 'Comitê');
+            if (result.error) validationErrors.push(result.error); else finalIdComite = result.id;
+        } else {
+            validationErrors.push('Comitê é obrigatório.');
+        }
+
+        if (idCategoria) {
+            finalIdCategoria = idCategoria;
+        } else if (como_conheceu) {
+            const result = findIdByText(como_conheceu, todasOpcoes_Como_Conheceu, 'Como Conheceu');
+            if (result.error) validationErrors.push(result.error); else finalIdCategoria = result.id;
+        } else {
+            validationErrors.push('Como Conheceu é obrigatório.');
+        }
+
+        // 3. Se houver erros, reporta e pula para o próximo lead
+        if (validationErrors.length > 0) {
             if (uiElement) uiElement.style.backgroundColor = '#f8d7da';
-            resultsDiv.innerHTML += `<div class="error">Erro: Linha com dados obrigatórios incompletos (${email || 'sem email'}).</div>`;
+            resultsDiv.innerHTML += `<div class="error">Erro na linha de "${email || nome}": ${validationErrors.join(' ')}</div>`;
             continue;
         }
 
-        // Mapeia texto para ID
-        const produtoResult = findIdByText(produto, todosProdutos, 'Produto');
-        const comiteResult = findIdByText(comite, todasAiesecs, 'Comitê');
-        const categoriaResult = findIdByText(como_conheceu, todasOpcoes_Como_Conheceu, 'Como Conheceu');
-
-        // Verifica se houve erros no mapeamento
-        const errors = [produtoResult.error, comiteResult.error, categoriaResult.error].filter(Boolean);
-        if (errors.length > 0) {
-            if (uiElement) uiElement.style.backgroundColor = '#f8d7da';
-            resultsDiv.innerHTML += `<div class="error">Erro em ${email}: ${errors.join(' ')}</div>`;
-            continue;
-        }
-
+        // 4. Se a validação passar, prepara e envia os dados
         const [day, month, year] = nascimento.split('/');
         const nascimentoISO = `${year}-${month}-${day} 00:00:00`;
-
         const data = {
             nome,
             sobrenome,
             email,
             tag: slugify(tag || ''),
-            idProduto: produtoResult.id,
-            idComite: comiteResult.id,
-            idCategoria: categoriaResult.id,
-            idprograma: siglaProduto.find(p => p.id === parseInt(produtoResult.id))?.idprograma,
-            nomeCL: todasAiesecs.find(a => a.id === comiteResult.id)?.text || 'AIESEC no Brasil',
+            idProduto: finalIdProduto,
+            idComite: finalIdComite,
+            idCategoria: finalIdCategoria,
             emails: [{ email: email, tipo: 'other' }],
             telefones: [{ numero: telefone.replace(/\D/g, ''), tipo: 'other' }],
             dataNascimento: nascimentoISO,
             idAutorizacao: "1",
-            idAnuncio: 0,
         };
 
         await sendLead(data, uiElement, resultsDiv);
@@ -1985,6 +2110,39 @@ async function handleFileUpload(fileContent, fileType) {
             throw new Error(`O cabeçalho do arquivo está incorreto. A ordem esperada é: ${expectedHeaders.join(', ')}`);
         }
 
+        // Validação prévia de campos obrigatórios vazios
+        const allValidationErrors = [];
+        dataRows.forEach((row, index) => {
+            const rowErrors = [];
+            // A ordem corresponde aos cabeçalhos esperados
+            if (!row[0]) rowErrors.push('nome');
+            if (!row[1]) rowErrors.push('sobrenome');
+            if (!row[2]) rowErrors.push('email');
+            if (!row[3]) rowErrors.push('telefone');
+            if (!row[4]) rowErrors.push('nascimento');
+            if (!row[5]) rowErrors.push('produto');
+            if (!row[6]) rowErrors.push('comite');
+            if (!row[7]) rowErrors.push('como_conheceu');
+
+            if (rowErrors.length > 0) {
+                // A linha no arquivo é o índice da linha de dados + 2 (cabeçalho + 1-based index)
+                allValidationErrors.push(`Linha ${index + 2} do arquivo: Faltando ${rowErrors.join(', ')}.`);
+            }
+        });
+
+        if (allValidationErrors.length > 0) {
+            showModal({
+                title: 'Campos Obrigatórios Não Preenchidos',
+                message: ['Por favor, corrija os erros no arquivo e faça o upload novamente.', ...allValidationErrors],
+                type: 'error',
+                showConfirm: false,
+                showCancel: true,
+                cancelText: 'OK'
+            });
+            document.getElementById('upload-results').innerHTML = `<div class="error">Upload cancelado. Corrija os erros no arquivo.</div>`;
+            return; // Aborta o processamento
+        }
+
         const leads = dataRows
             .filter(row => row.some(cell => cell && cell.toString().trim() !== '')) // Ignora linhas totalmente vazias
             .map(row => ({
@@ -2053,7 +2211,8 @@ function downloadTemplate(format) {
  */
 async function sendLead(data, uiElement, resultsDiv) {
     try {
-        const response = await fetch("https://baziAiesec.pythonanywhere.com/adicionar-card", {
+        console.log(data);
+        /*const response = await fetch("https://baziAiesec.pythonanywhere.com/adicionar-card", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -2064,7 +2223,7 @@ async function sendLead(data, uiElement, resultsDiv) {
             throw new Error(`HTTP ${response.status}: ${errorData}`);
         }
 
-        await response.json();
+        await response.json();*/
         if (uiElement) uiElement.style.backgroundColor = '#d4edda'; // Sucesso
         resultsDiv.innerHTML += `<div class="success">Sucesso: Lead ${data.email} cadastrado.</div>`;
     } catch (error) {
