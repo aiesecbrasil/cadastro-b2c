@@ -1418,7 +1418,7 @@ async function enviarFormularioObrigatorio() {
 
         const idComiteParaPodio = comiteMatch ? comiteMatch.id : 39;
         selectedCommitteeId = idComiteParaPodio;
-        
+
 
         if (aiesecTexto) {
             const committeeIdMapeado = getAiesecIdFromNome(divisaoMercado[aiesecTexto.replace("AIESEC em ", "").replace("AIESEC no ", "").toLowerCase()]);
@@ -1433,7 +1433,7 @@ async function enviarFormularioObrigatorio() {
             selectedCommitteeText = document.getElementById('combo-input-aiesec')?.value?.trim() || selectedCommitteeText;
         }
 
-        
+
         if (aiesecTexto) {
             dados += `<strong>AiESEC mais próxima</strong>: ${nomeCL || selectedCommitteeText}<br>`;
         }
@@ -1484,7 +1484,7 @@ async function enviarFormularioObrigatorio() {
                 // Use the global selectedId variáveis
                 nome,
                 sobrenome,
-                nomeCL:nomeCL || selectedCommitteeText,
+                nomeCL: nomeCL || selectedCommitteeText,
                 emails: emailsEnvio,
                 telefones: telefonesEnvio,
                 dataNascimento: inputISO.value,
@@ -1494,7 +1494,7 @@ async function enviarFormularioObrigatorio() {
                 idAutorizacao: "1",
                 tag: slugify(tagValue)
             };
-            
+
             try {
                 const response = await fetch("https://baziAiesec.pythonanywhere.com/adicionar-card-b2c", {
                     method: "POST",
@@ -1508,7 +1508,7 @@ async function enviarFormularioObrigatorio() {
                     throw { status: response.status, backend };
                 }
 
-                
+
                 esconderSpinner();
                 showModal({
                     title: "Dados enviados com sucesso!",
@@ -1957,7 +1957,9 @@ async function processAndSendLeads(leads, resultsDivId) {
 
         // 2. Valida e resolve IDs para formulário em massa (tem ID) e upload de arquivo (tem texto)
         let finalIdProduto, finalIdComite, finalIdCategoria;
+        let nomeCLFinal = '';
 
+        // --- PRODUTO ---
         if (idProduto) {
             finalIdProduto = idProduto;
         } else if (produto) {
@@ -1967,15 +1969,44 @@ async function processAndSendLeads(leads, resultsDivId) {
             validationErrors.push('Produto é obrigatório.');
         }
 
-        if (idComite) {
-            finalIdComite = idComite;
-        } else if (comite) {
-            const result = findIdByText(comite, todasAiesecs, 'Comitê');
-            if (result.error) validationErrors.push(result.error); else finalIdComite = result.id;
+        // --- COMITÊ (com divisão de mercado) ---
+        let comiteOriginalText = '';
+        if (idComite) { // Bulk form: ID é fornecido
+            const comiteObj = todasAiesecs.find(a => String(a.id) === String(idComite));
+            if (comiteObj) {
+                comiteOriginalText = comiteObj.text;
+            } else {
+                validationErrors.push('Comitê selecionado é inválido.');
+            }
+        } else if (comite) { // File upload: Texto é fornecido
+            comiteOriginalText = comite;
         } else {
             validationErrors.push('Comitê é obrigatório.');
         }
 
+        // Aplica a regra de divisão de mercado, se tivermos o produto e o comitê original
+        if (finalIdProduto && comiteOriginalText) {
+            const divisaoMercado = (String(finalIdProduto) === '1') ? divisaoMercadoGV : divisaoMercadoGT;
+            // Extrai o nome da cidade/base do texto do comitê. Ex: "AIESEC em Salvador" -> "salvador"
+            const comiteBase = comiteOriginalText
+                .replace(/AIESEC\s+(em|no|na)\s+/i, '')
+                .replace(/unidade\s+/i, '')
+                .trim()
+                .toLowerCase();
+
+            // Aplica a divisão de mercado. Se não encontrar, usa o texto original.
+            nomeCLFinal = divisaoMercado[comiteBase] || comiteOriginalText;
+
+            // Agora, encontra o ID do comitê final usando a função de busca flexível
+            const idEncontrado = getAiesecIdFromNome(nomeCLFinal);
+            if (idEncontrado) {
+                finalIdComite = idEncontrado;
+            } else {
+                validationErrors.push(`Comitê "${nomeCLFinal}" (após divisão de mercado) não foi encontrado.`);
+            }
+        }
+
+        // --- COMO CONHECEU ---
         if (idCategoria) {
             finalIdCategoria = idCategoria;
         } else if (como_conheceu) {
@@ -1996,13 +2027,10 @@ async function processAndSendLeads(leads, resultsDivId) {
         const [day, month, year] = nascimento.split('/');
         const nascimentoISO = `${year}-${month}-${day} 00:00:00`;
 
-        const comiteObj = todasAiesecs.find(a => String(a.id) === String(finalIdComite));
-        const nomeCL = comiteObj ? comiteObj.text : '';
-
         const data = {
             nome,
             sobrenome,
-            nomeCL,
+            nomeCL: nomeCLFinal,
             tag: slugify(tag || ''),
             idProduto: finalIdProduto,
             idComite: finalIdComite,
