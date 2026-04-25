@@ -1489,7 +1489,7 @@ async function enviarFormularioObrigatorio() {
                 telefones: telefonesEnvio,
                 dataNascimento: inputISO.value,
                 idProduto: selectedProductId,
-                idComite: CCL == "MC BAZI" ? 39 : selectedCommitteeId,
+                idComite: nomeCL == "MC BAZI" ? 39 : selectedCommitteeId,
                 idCategoria: selectedAdSourceId,
                 idAutorizacao: "1",
                 tag: slugify(tagValue)
