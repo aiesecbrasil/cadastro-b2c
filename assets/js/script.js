@@ -1484,7 +1484,7 @@ async function enviarFormularioObrigatorio() {
                 // Use the global selectedId variáveis
                 nome,
                 sobrenome,
-                nomeCl:nomeCl || selectedCommitteeText,
+                nomeCL:nomeCL || selectedCommitteeText,
                 emails: emailsEnvio,
                 telefones: telefonesEnvio,
                 dataNascimento: inputISO.value,
