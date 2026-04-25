@@ -1995,10 +1995,14 @@ async function processAndSendLeads(leads, resultsDivId) {
         // 4. Se a validação passar, prepara e envia os dados
         const [day, month, year] = nascimento.split('/');
         const nascimentoISO = `${year}-${month}-${day} 00:00:00`;
+
+        const comiteObj = todasAiesecs.find(a => String(a.id) === String(finalIdComite));
+        const nomeCL = comiteObj ? comiteObj.text : '';
+
         const data = {
             nome,
             sobrenome,
-            email,
+            nomeCL,
             tag: slugify(tag || ''),
             idProduto: finalIdProduto,
             idComite: finalIdComite,
@@ -2207,7 +2211,9 @@ function downloadTemplate(format) {
  * @param {HTMLElement} resultsDiv - O div para logar os resultados.
  */
 async function sendLead(data, uiElement, resultsDiv) {
+    const leadIdentifier = data.emails?.[0]?.email || data.nome;
     try {
+        console.log(data)
         const response = await fetch("https://baziAiesec.pythonanywhere.com/adicionar-card-b2c", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -2219,10 +2225,10 @@ async function sendLead(data, uiElement, resultsDiv) {
             throw new Error(`HTTP ${response.status}: ${errorData}`);
         }
         if (uiElement) uiElement.style.backgroundColor = '#d4edda'; // Sucesso
-        resultsDiv.innerHTML += `<div class="success">Sucesso: Lead ${data.email} cadastrado.</div>`;
+        resultsDiv.innerHTML += `<div class="success">Sucesso: Lead ${leadIdentifier} cadastrado.</div>`;
     } catch (error) {
         console.error('Erro ao enviar lead:', error);
         if (uiElement) uiElement.style.backgroundColor = '#f8d7da'; // Erro
-        resultsDiv.innerHTML += `<div class="error">Erro ao cadastrar ${data.email}: ${error.message}</div>`;
+        resultsDiv.innerHTML += `<div class="error">Erro ao cadastrar ${leadIdentifier}: ${error.message}</div>`;
     }
 }
