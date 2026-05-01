@@ -2206,6 +2206,7 @@ function initUploadMode() {
         <div id="upload-instructions">
             <p>Faça o upload de um arquivo. A primeira linha deve ser o cabeçalho e a ordem das colunas deve ser: <strong>nome,sobrenome,email,telefone,nascimento,produto,comite,como_conheceu,tag</strong></p>
             <p>Os campos "Produto", "Comitê" e "Como Conheceu" no arquivo de modelo terão uma lista de opções para selecionar. Formato da data: DD/MM/YYYY.</p>
+            <p>Em caso de erro, reenvie apenas os leads que apresentaram falha, para evitar duplicidades no pódio.</p>
         </div>
         <div id="template-download-area">
             <p>Não tem um modelo? acesse o link abaixo:</p>
