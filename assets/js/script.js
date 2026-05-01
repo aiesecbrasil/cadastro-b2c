@@ -505,6 +505,7 @@ function showModal(options) {
      *  showCancel?: boolean,
      *  cancelText?: string,
      *  onCancel?: (ev: MouseEvent) => void,
+ *  htmlMessage?: string,
      *  backendError?: unknown
      * }} ModalOptions
      * @type {ModalOptions}
@@ -519,6 +520,7 @@ function showModal(options) {
         showCancel = true,
         cancelText = 'Cancelar',
         onCancel,
+        htmlMessage,
         backendError
     } = options || {};
 
@@ -555,7 +557,11 @@ function showModal(options) {
     tituloModal.textContent = title || '';
 
     // Corpo do modal: mensagem principal ou possível mensagem do backend
-    corpo.textContent = backendMsg || normalizedMessage;
+    if (htmlMessage) {
+        corpo.innerHTML = htmlMessage;
+    } else {
+        corpo.textContent = backendMsg || normalizedMessage;
+    }
 
     // Estado e rótulos dos botões
     botaoConfirmar.style.display = showConfirm ? 'inline-block' : 'none';
@@ -589,6 +595,71 @@ function showModal(options) {
 
     // Exibe o modal
     myModal.show();
+}
+
+/**
+ * Atualiza o conteúdo de um modal já aberto, sem reabri-lo.
+ * Usado para transformar o modal de "processamento" em "resultado".
+ */
+function updateOpenModal(options) {
+    const {
+        title,
+        message,
+        type = 'info', // Adicionado para consistência, embora não usado diretamente aqui
+        htmlMessage,
+        showConfirm = true,
+        confirmText = 'Confirmar',
+        onConfirm,
+        showCancel = true,
+        cancelText = 'Cancelar',
+        onCancel
+    } = options || {};
+
+    const modalEl = document.getElementById('exampleModalLong');
+    // Se o modal não estiver aberto por algum motivo, usa o showModal como fallback.
+    if (!modalEl || !modalEl.classList.contains('show')) {
+        showModal(options);
+        return;
+    }
+
+    const tituloModal = document.getElementById('exampleModalLongTitle');
+    const corpo = document.getElementById('DadosAqui');
+    const botaoConfirmar = document.getElementById('botaoConfirmar');
+    const botaoCancelar = document.getElementById('botaoCancelar');
+    const myModal = bootstrap.Modal.getInstance(modalEl);
+
+    // Título
+    tituloModal.textContent = title || '';
+
+    // Corpo
+    if (htmlMessage) {
+        corpo.innerHTML = htmlMessage;
+    } else {
+        const normalizedMessage = Array.isArray(message) ? message.join('\n') : (message || '');
+        corpo.textContent = normalizedMessage;
+    }
+
+    // Botões
+    botaoConfirmar.style.display = showConfirm ? 'inline-block' : 'none';
+    botaoConfirmar.disabled = !showConfirm; // Adicionado para consistência
+    botaoConfirmar.textContent = confirmText;
+
+    botaoCancelar.style.display = showCancel ? 'inline-block' : 'none';
+    botaoCancelar.disabled = !showCancel; // Adicionado para consistência
+    botaoCancelar.textContent = cancelText;
+
+    // Remove listeners antigos e adiciona novos para evitar múltiplos disparos
+    const novoConfirmar = botaoConfirmar.cloneNode(true);
+    botaoConfirmar.parentNode.replaceChild(novoConfirmar, botaoConfirmar);
+    const novoCancelar = botaoCancelar.cloneNode(true);
+    botaoCancelar.parentNode.replaceChild(novoCancelar, botaoCancelar);
+
+    if (showConfirm && typeof onConfirm === 'function') {
+        novoConfirmar.addEventListener('click', (ev) => { onConfirm(ev); if (myModal) myModal.hide(); }, { once: true });
+    }
+    if (showCancel && typeof onCancel === 'function') {
+        novoCancelar.addEventListener('click', (ev) => { onCancel(ev); if (myModal) myModal.hide(); }, { once: true });
+    }
 }
 // Inicializa o fluxo principal: busca metadados e monta campos dinâmicos.
 // Em caso de erro de rede/parse, exibe modal amigável e permite recarregar.
@@ -1847,10 +1918,10 @@ function addBulkLeadRow() {
 async function submitBulkLeads() {
     const uiRows = document.querySelectorAll('#bulk-leads-table tbody tr');
     const submitBtn = document.getElementById('submit-bulk-leads');
-    const resultsDiv = document.getElementById('bulk-results');
 
     // Reseta a UI antes de processar
-    resultsDiv.innerHTML = '';
+    const resultsDiv = document.getElementById('bulk-results');
+    if (resultsDiv) resultsDiv.innerHTML = '';
     uiRows.forEach(row => row.style.backgroundColor = '');
 
     submitBtn.disabled = true;
@@ -1860,6 +1931,7 @@ async function submitBulkLeads() {
 
     // Validação prévia para campos vazios
     uiRows.forEach((row, index) => {
+        // Adiciona um ID interno para rastrear o status no modal de processamento
         const leadData = {
             nome: row.querySelector('.bulk-nome').value.trim(),
             sobrenome: row.querySelector('.bulk-sobrenome').value.trim(),
@@ -1870,7 +1942,8 @@ async function submitBulkLeads() {
             idComite: row.querySelector('.comite-cell input[type="hidden"]').value,
             idCategoria: row.querySelector('.como-conheceu-cell input[type="hidden"]').value,
             tag: row.querySelector('.bulk-tag').value.trim(),
-            uiElement: row
+            uiElement: row,
+            _internalId: `lead-process-${index}`
         };
 
         const rowErrors = [];
@@ -1904,9 +1977,70 @@ async function submitBulkLeads() {
         return; // Aborta o envio
     }
 
-    await processAndSendLeads(leads, 'bulk-results');
+    // Exibe o modal de processamento
+    const modalBodyContent = `
+        <ul id="bulk-processing-list">
+            ${leads.map(lead => `
+                <li id="${lead._internalId}">
+                    <div class="lead-info">
+                        <span class="lead-name">${lead.nome} ${lead.sobrenome}</span>
+                        <span class="lead-email">(${lead.email})</span>
+                    </div>
+                    <div class="lead-status">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                    </div>
+                </li>
+            `).join('')}
+        </ul>
+    `;
 
-    submitBtn.disabled = false;
+    showModal({
+        title: "Processando Leads...",
+        htmlMessage: modalBodyContent,
+        showConfirm: false,
+        showCancel: false,
+    });
+
+    // Processa os leads e obtém os resultados
+    const { successful, failed } = await processAndSendLeads(leads);
+
+    // Após o processamento, atualiza o modal com o resultado final.
+    // O usuário fechará o modal manualmente.
+    if (failed.length > 0) {
+        downloadFailedLeads(failed);
+        const failedListHtml = failed.map(lead =>
+            `<li><strong>${lead.nome} ${lead.sobrenome}</strong> (${lead.email}): ${lead.errorReason || 'Erro desconhecido'}</li>`
+        ).join('');
+
+        updateOpenModal({
+            title: "Processamento Concluído com Erros",
+            htmlMessage: `
+                <p class="text-center">Foram cadastrados <strong>${successful.length} leads com sucesso</strong> e <strong>${failed.length} leads falharam</strong>.</p>
+                <p class="text-center" style="font-size: 14px;">O download do arquivo CSV com os detalhes dos erros foi iniciado automaticamente.</p>
+                <ul style="font-size: 13px; text-align: left; max-height: 150px; overflow-y: auto; margin-top: 15px;">${failedListHtml}</ul>
+            `,
+            showConfirm: false,
+            cancelText: "OK",
+            onCancel: () => {
+                // Limpa a UI da tabela de massa
+                document.getElementById('bulk-leads-table').querySelector('tbody').innerHTML = '';
+                addBulkLeadRow();
+            }
+        });
+    } else {
+        updateOpenModal({
+            title: "Envio Concluído!",
+            message: `Todos os ${successful.length} leads foram cadastrados com sucesso!`,
+            showConfirm: false,
+            cancelText: "OK",
+            onCancel: () => {
+                document.getElementById('bulk-leads-table').querySelector('tbody').innerHTML = '';
+                addBulkLeadRow();
+            }
+        });
+    }
+
+    submitBtn.disabled = false; // Reabilita o botão
 }
 
 /**
@@ -1914,9 +2048,9 @@ async function submitBulkLeads() {
  * @param {Array<object>} leads - Array de objetos de lead.
  * @param {string} resultsDivId - ID do elemento div para exibir os resultados.
  */
-async function processAndSendLeads(leads, resultsDivId) {
-    const resultsDiv = document.getElementById(resultsDivId);
-    resultsDiv.innerHTML = '<div>Processando...</div>';
+async function processAndSendLeads(leads) {
+    const successful = [];
+    const failed = [];
 
     // Helper para encontrar ID a partir do texto (case-insensitive)
     const findIdByText = (text, options, fieldName) => {
@@ -1928,10 +2062,7 @@ async function processAndSendLeads(leads, resultsDivId) {
     };
 
     for (const lead of leads) {
-        const { uiElement, nome, sobrenome, email, telefone, nascimento, produto, comite, como_conheceu, tag, idProduto, idComite, idCategoria } = lead;
-
-        // Reseta o estilo da linha
-        if (uiElement) uiElement.style.backgroundColor = '';
+        const { nome, sobrenome, email, telefone, nascimento, produto, comite, como_conheceu, tag, idProduto, idComite, idCategoria } = lead;
 
         const validationErrors = [];
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}$/;
@@ -2018,8 +2149,9 @@ async function processAndSendLeads(leads, resultsDivId) {
 
         // 3. Se houver erros, reporta e pula para o próximo lead
         if (validationErrors.length > 0) {
-            if (uiElement) uiElement.style.backgroundColor = '#f8d7da';
-            resultsDiv.innerHTML += `<div class="error">Erro na linha de "${email || nome}": ${validationErrors.join(' ')}</div>`;
+            updateLeadStatusInModal(lead._internalId, 'error');
+            lead.errorReason = validationErrors.join(' ');
+            failed.push(lead);
             continue;
         }
 
@@ -2041,10 +2173,25 @@ async function processAndSendLeads(leads, resultsDivId) {
             idAutorizacao: "1",
         };
 
-        await sendLead(data, uiElement, resultsDiv);
+        const result = await sendLead(data, lead._internalId);
+
+        if (result.success) {
+            successful.push(lead);
+        } else {
+            lead.errorReason = decodeUnicode(result.error);
+            failed.push(lead);
+        }
     }
 
-    resultsDiv.innerHTML += '<div>Processamento concluído.</div>';
+    return { successful, failed };
+}
+
+function decodeUnicode(str) {
+    if (typeof str !== "string") return str;
+
+    return str.replace(/\\u[\dA-F]{4}/gi, (match) =>
+        String.fromCharCode(parseInt(match.replace(/\\u/g, ""), 16))
+    );
 }
 
 /**
@@ -2055,54 +2202,46 @@ function initUploadMode() {
     if (!panel) return;
 
     panel.innerHTML = `
-        <h3>Upload de Arquivo (.csv, .xls, .xlsx)</h3>
+        <h3>Upload de Arquivo (.xls, .xlsx)</h3>
         <div id="upload-instructions">
             <p>Faça o upload de um arquivo. A primeira linha deve ser o cabeçalho e a ordem das colunas deve ser: <strong>nome,sobrenome,email,telefone,nascimento,produto,comite,como_conheceu,tag</strong></p>
-            <p>Para arquivos CSV, use vírgula (,) como separador. Formato da data: DD/MM/YYYY.</p>
+            <p>Os campos "Produto", "Comitê" e "Como Conheceu" no arquivo de modelo terão uma lista de opções para selecionar. Formato da data: DD/MM/YYYY.</p>
         </div>
         <div id="template-download-area">
-            <p>Não tem um modelo? Baixe um aqui:</p>
-            <button type="button" class="btn btn-secondary btn-sm" id="download-csv">Modelo .csv</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="download-xls">Modelo .xls</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="download-xlsx">Modelo .xlsx</button>
+            <p>Não tem um modelo? acesse o link abaixo:</p>
+            <button type="button" class="btn btn-info btn-sm" id="access-template-btn">Acessar Online (Google Sheets)</button>
         </div>
-        <input type="file" id="file-upload-input" accept=".csv, .xls, .xlsx" class="form-control" style="margin-top: 20px;">
+        <input type="file" id="file-upload-input" accept=".xls, .xlsx" class="form-control" style="margin-top: 20px;">
         <button type="button" id="submit-file-upload" class="next" style="margin-top: 15px;">Enviar Arquivo</button>
         <div id="upload-results" class="upload-results"></div>
     `;
 
-    document.getElementById('download-csv').addEventListener('click', () => downloadTemplate('csv'));
-    document.getElementById('download-xls').addEventListener('click', () => downloadTemplate('xls'));
-    document.getElementById('download-xlsx').addEventListener('click', () => downloadTemplate('xlsx'));
+    document.getElementById('access-template-btn').addEventListener('click', () => {
+        window.open('https://docs.google.com/spreadsheets/d/1bHWk9ZFYFuB6gCRSSxH0X5sYT4Jc-PSGO1WIsrLAopE/edit?usp=sharing', '_blank');
+    });
 
-    document.getElementById('submit-file-upload').addEventListener('click', () => {
+    document.getElementById('submit-file-upload').addEventListener('click', async () => {
         const submitBtn = document.getElementById('submit-file-upload');
         const fileInput = document.getElementById('file-upload-input');
         const file = fileInput.files[0];
+
         if (!file) {
-            alert('Por favor, selecione um arquivo.');
+            showModal({ title: 'Nenhum arquivo selecionado', message: 'Por favor, selecione um arquivo para continuar.', showConfirm: false, cancelText: 'OK' });
             return;
         }
 
         const fileType = file.name.split('.').pop().toLowerCase();
-        if (!['csv', 'xls', 'xlsx'].includes(fileType)) {
-            alert('Formato de arquivo inválido. Use .csv, .xls ou .xlsx.');
+        if (!['xls', 'xlsx'].includes(fileType)) {
+            showModal({ title: 'Formato Inválido', message: 'Formato de arquivo inválido. Use .csv, .xls ou .xlsx.', showConfirm: false, cancelText: 'OK' });
             return;
         }
 
         submitBtn.disabled = true;
-        const reader = new FileReader();
 
-        reader.onload = async (event) => {
-            await handleFileUpload(event.target.result, fileType);
-            submitBtn.disabled = false; // Reabilita o botão após o processamento
-        };
+        const fileContent = await file.arrayBuffer(); // Lê como ArrayBuffer para o XLSX.js
+        await handleFileUpload(fileContent, fileType);
 
-        if (fileType === 'csv') {
-            reader.readAsText(file);
-        } else { // xls, xlsx
-            reader.readAsArrayBuffer(file);
-        }
+        submitBtn.disabled = false;
     });
 }
 
@@ -2112,36 +2251,48 @@ function initUploadMode() {
  * @param {string} fileType - A extensão do arquivo ('csv', 'xls', 'xlsx').
  */
 async function handleFileUpload(fileContent, fileType) {
+    const resultsDiv = document.getElementById('upload-results');
     const expectedHeaders = ['nome', 'sobrenome', 'email', 'telefone', 'nascimento', 'produto', 'comite', 'como_conheceu', 'tag'];
     let dataRows = [];
 
     try {
-        if (fileType === 'csv') {
-            const lines = fileContent.split(/\r\n|\n/).filter(line => line.trim() !== '');
-            if (lines.length === 0) throw new Error("Arquivo CSV vazio ou inválido.");
-            dataRows = lines.map(line => line.split(','));
-        } else { // xls, xlsx
-            const workbook = XLSX.read(fileContent, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            // raw: false para garantir que datas e números venham como strings formatadas
-            dataRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false });
-        }
+        const workbook = XLSX.read(fileContent, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        dataRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false });
 
         if (dataRows.length < 2) { // Precisa de cabeçalho + pelo menos uma linha de dados
             throw new Error("O arquivo não contém dados para processar.");
         }
 
-        const headers = dataRows.shift().map(h => String(h || '').trim());
+        const headers = dataRows.shift().map(h => String(h || '').trim().toLowerCase());
 
         // Validar cabeçalhos
-        if (JSON.stringify(headers) !== JSON.stringify(expectedHeaders)) {
-            throw new Error(`O cabeçalho do arquivo está incorreto. A ordem esperada é: ${expectedHeaders.join(', ')}`);
+        const headerErrors = [];
+        expectedHeaders.forEach((expected, index) => {
+            const actual = headers[index] || '';
+            if (actual !== expected) {
+                headerErrors.push(`Coluna ${index + 1}: esperado "${expected}", mas encontrado "${actual}".`);
+            }
+        });
+
+        if (headers.length !== expectedHeaders.length) {
+            headerErrors.push(`O arquivo tem ${headers.length} colunas, mas o esperado são ${expectedHeaders.length}.`);
+        }
+
+        if (headerErrors.length > 0) {
+            // Usamos \n para quebras de linha no modal
+            throw new Error(`O cabeçalho do arquivo está incorreto:\n\n- ${headerErrors.join('\n- ')}`);
         }
 
         // Validação prévia de campos obrigatórios vazios
         const allValidationErrors = [];
         dataRows.forEach((row, index) => {
+            // Pula a validação para linhas que estão completamente em branco.
+            if (row.every(cell => !cell || String(cell).trim() === '')) {
+                return; // Ignora a linha e continua para a próxima.
+            }
+
             const rowErrors = [];
             // A ordem corresponde aos cabeçalhos esperados
             if (!row[0]) rowErrors.push('nome');
@@ -2168,13 +2319,13 @@ async function handleFileUpload(fileContent, fileType) {
                 showCancel: true,
                 cancelText: 'OK'
             });
-            document.getElementById('upload-results').innerHTML = `<div class="error">Upload cancelado. Corrija os erros no arquivo.</div>`;
+            resultsDiv.innerHTML = `<div class="error">Upload cancelado. Corrija os erros no arquivo.</div>`;
             return; // Aborta o processamento
         }
 
         const leads = dataRows
             .filter(row => row.some(cell => cell && cell.toString().trim() !== '')) // Ignora linhas totalmente vazias
-            .map(row => ({
+            .map((row, index) => ({
                 nome: (row[0] || '').trim(),
                 sobrenome: (row[1] || '').trim(),
                 email: (row[2] || '').trim(),
@@ -2184,52 +2335,191 @@ async function handleFileUpload(fileContent, fileType) {
                 comite: (row[6] || '').trim(),
                 como_conheceu: (row[7] || '').trim(),
                 tag: (row[8] || '').trim(),
-                uiElement: null
+                uiElement: null,
+                _internalId: `lead-upload-${index}`
             }));
 
-        await processAndSendLeads(leads, 'upload-results');
+        // Exibe o modal de processamento
+        const modalBodyContent = `
+            <ul id="bulk-processing-list">
+                ${leads.map(lead => `
+                    <li id="${lead._internalId}">
+                        <div class="lead-info">
+                            <span class="lead-name">${lead.nome} ${lead.sobrenome}</span>
+                            <span class="lead-email">(${lead.email})</span>
+                        </div>
+                        <div class="lead-status">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                        </div>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+        showModal({ title: "Processando Leads do Arquivo...", htmlMessage: modalBodyContent, showConfirm: false, showCancel: false });
 
+        const { successful, failed } = await processAndSendLeads(leads);
+
+        // Após o processamento, atualiza o modal com o resultado final.
+        // O usuário fechará o modal manualmente.
+        if (failed.length > 0) {
+            downloadFailedLeads(failed);
+            const failedListHtml = failed.map(lead =>
+                `<li><strong>${lead.nome} ${lead.sobrenome}</strong> (${lead.email}): ${lead.errorReason || 'Erro desconhecido'}</li>`
+            ).join('');
+
+            updateOpenModal({
+                title: "Processamento Concluído com Erros",
+                htmlMessage: `
+                    <p class="text-center">Foram cadastrados <strong>${successful.length} leads com sucesso</strong> e <strong>${failed.length} leads falharam</strong>.</p>
+                    <p class="text-center" style="font-size: 14px;">O download do arquivo CSV com os detalhes dos erros foi iniciado automaticamente.</p>
+                    <ul style="font-size: 13px; text-align: left; max-height: 150px; overflow-y: auto; margin-top: 15px;">${failedListHtml}</ul>
+                `,
+                showConfirm: false,
+                cancelText: "OK",
+                onCancel: () => {
+                    document.getElementById('file-upload-input').value = '';
+                    document.getElementById('upload-results').innerHTML = '';
+                }
+            });
+        } else {
+            updateOpenModal({
+                title: "Envio Concluído!",
+                message: `Todos os ${successful.length} leads foram cadastrados com sucesso!`,
+                showConfirm: false,
+                cancelText: "OK",
+                onCancel: () => {
+                    document.getElementById('file-upload-input').value = '';
+                    document.getElementById('upload-results').innerHTML = '';
+                }
+            });
+        }
     } catch (error) {
-        document.getElementById('upload-results').innerHTML = `<div class="error">Erro ao processar o arquivo: ${error.message}</div>`;
+        resultsDiv.innerHTML = `<div class="error">Erro ao processar o arquivo: ${error.message}</div>`;
         console.error("Erro no upload:", error);
     }
 }
 
 /**
  * Gera e baixa um arquivo de modelo para upload de leads.
- * @param {'csv' | 'xls' | 'xlsx'} format - O formato do arquivo a ser baixado.
+ * @param {'xls' | 'xlsx'} format - O formato do arquivo a ser baixado.
  */
 function downloadTemplate(format) {
+    // 1. Headers and example data
     const headers = ['nome', 'sobrenome', 'email', 'telefone', 'nascimento', 'produto', 'comite', 'como_conheceu', 'tag'];
     const exampleData = [
-        'João',
-        'Silva',
-        'joao.silva@example.com',
-        '11999998888',
-        '01/01/1995',
-        'Voluntário Global',
-        'AIESEC em Salvador',
-        'Instagram',
-        'evento-sp-2024'
+        'João', 'Silva', 'joao.silva@example.com', '11999998888', '01/01/1995',
+        'Voluntário Global', 'AIESEC em Salvador', 'Instagram', 'evento-sp-2024'
     ];
-    const data = [headers, exampleData];
+    const mainSheetData = [headers, exampleData];
 
-    if (format === 'csv') {
-        let csvContent = data.map(e => e.join(",")).join("\n");
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", "modelo_aiesec.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } else { // xls, xlsx
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Leads");
-        XLSX.writeFile(wb, `modelo_aiesec.${format}`);
+    // 2. Data for dropdowns (as array of arrays for sheet columns)
+    const produtosOptions = todosProdutos.map(p => [p.text]);
+    const comitesOptions = todasAiesecs.map(c => [c.text]);
+    const comoConheceuOptions = todasOpcoes_Como_Conheceu.map(c => [c.text]);
+
+    // 3. Create workbook and worksheets
+    const wb = XLSX.utils.book_new();
+
+    // Main sheet with data
+    const ws = XLSX.utils.aoa_to_sheet(mainSheetData);
+
+    // Hidden sheet for all dropdown options
+    const ws_options = XLSX.utils.aoa_to_sheet(comitesOptions); // Column A: Comitês
+    XLSX.utils.sheet_add_aoa(ws_options, produtosOptions, { origin: 'B1' }); // Column B: Produtos
+    XLSX.utils.sheet_add_aoa(ws_options, comoConheceuOptions, { origin: 'C1' }); // Column C: Como Conheceu
+
+    // 4. Set column widths for the main sheet
+    ws['!cols'] = [
+        { wch: 20 }, // A: nome
+        { wch: 20 }, // B: sobrenome
+        { wch: 30 }, // C: email
+        { wch: 15 }, // D: telefone
+        { wch: 12 }, // E: nascimento
+        { wch: 30 }, // F: produto
+        { wch: 45 }, // G: comite
+        { wch: 25 }, // H: como_conheceu
+        { wch: 20 }  // I: tag
+    ];
+
+    // 5. Add data validation (dropdowns)
+    const validationRange = 1000; // Apply validation for the first 1000 rows
+    if (!ws['!dataValidations']) ws['!dataValidations'] = [];
+
+    // Produto (Coluna F) - Reference hidden sheet to avoid 255 char limit
+    ws['!dataValidations'].push({
+        sqref: `F2:F${validationRange}`,
+        opts: {
+            type: 'list',
+            formula1: `'Opcoes'!$B$1:$B$${produtosOptions.length}`,
+            showDropDown: true,
+            allowBlank: true
+        }
+    });
+    if (produtosOptions.length > 0) {
+        ws['!dataValidations'].push({
+            sqref: `F2:F${validationRange}`,
+            opts: {
+                type: 'list',
+                formula1: `'Opcoes'!$B$1:$B$${produtosOptions.length}`,
+                showDropDown: true,
+                allowBlank: true
+            }
+        });
     }
+
+    // Comitê (Coluna G) - Reference hidden sheet
+    ws['!dataValidations'].push({
+        sqref: `G2:G${validationRange}`,
+        opts: {
+            type: 'list',
+            formula1: `'Opcoes'!$A$1:$A$${comitesOptions.length}`,
+            showDropDown: true,
+            allowBlank: true
+        }
+    });
+    if (comitesOptions.length > 0) {
+        ws['!dataValidations'].push({
+            sqref: `G2:G${validationRange}`,
+            opts: {
+                type: 'list',
+                formula1: `'Opcoes'!$A$1:$A$${comitesOptions.length}`,
+                showDropDown: true,
+                allowBlank: true
+            }
+        });
+    }
+
+    // Como Conheceu (Coluna H) - Reference hidden sheet to avoid 255 char limit
+    ws['!dataValidations'].push({
+        sqref: `H2:H${validationRange}`,
+        opts: {
+            type: 'list',
+            formula1: `'Opcoes'!$C$1:$C$${comoConheceuOptions.length}`,
+            showDropDown: true,
+            allowBlank: true
+        }
+    });
+    if (comoConheceuOptions.length > 0) {
+        ws['!dataValidations'].push({
+            sqref: `H2:H${validationRange}`,
+            opts: {
+                type: 'list',
+                formula1: `'Opcoes'!$C$1:$C$${comoConheceuOptions.length}`,
+                showDropDown: true,
+                allowBlank: true
+            }
+        });
+    }
+
+    // 6. Add sheets to workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Leads");
+    XLSX.utils.book_append_sheet(wb, ws_options, "Opcoes");
+
+    // Hide the options sheet
+    wb.Sheets["Opcoes"].Hidden = 2; // Oculta a aba de opções do usuário final (2 = "very hidden")
+
+    // 7. Write and download the file
+    XLSX.writeFile(wb, `modelo_aiesec_com_opcoes.${format}`);
 }
 
 /**
@@ -2238,7 +2528,7 @@ function downloadTemplate(format) {
  * @param {HTMLElement} uiElement - O elemento da UI (linha da tabela) a ser atualizado.
  * @param {HTMLElement} resultsDiv - O div para logar os resultados.
  */
-async function sendLead(data, uiElement, resultsDiv) {
+async function sendLead(data, internalId) {
     const leadIdentifier = data.emails?.[0]?.email || data.nome;
     try {
         console.log(data)
@@ -2248,15 +2538,73 @@ async function sendLead(data, uiElement, resultsDiv) {
             body: JSON.stringify(data),
         });
 
+        const responseText = await response.text();
         if (!response.ok) {
-            const errorData = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorData}`);
+            throw new Error(`HTTP ${response.status}: ${responseText}`);
         }
-        if (uiElement) uiElement.style.backgroundColor = '#d4edda'; // Sucesso
-        resultsDiv.innerHTML += `<div class="success">Sucesso: Lead ${leadIdentifier} cadastrado.</div>`;
+
+        updateLeadStatusInModal(internalId, 'success');
+        return { success: true, data };
+
     } catch (error) {
         console.error('Erro ao enviar lead:', error);
-        if (uiElement) uiElement.style.backgroundColor = '#f8d7da'; // Erro
-        resultsDiv.innerHTML += `<div class="error">Erro ao cadastrar ${leadIdentifier}: ${error.message}</div>`;
+        updateLeadStatusInModal(internalId, 'error');
+        return { success: false, data, error: error.message };
     }
+}
+
+/**
+ * Atualiza o ícone de status de um lead no modal de processamento.
+ * @param {string} internalId - O ID interno do elemento <li> do lead.
+ * @param {'success' | 'error'} status - O novo status.
+ */
+function updateLeadStatusInModal(internalId, status) {
+    const listItem = document.getElementById(internalId);
+    if (!listItem) return;
+
+    const statusDiv = listItem.querySelector('.lead-status');
+    if (!statusDiv) return;
+
+    if (status === 'success') {
+        statusDiv.innerHTML = `<i class="bi bi-check-lg status-icon status-success"></i>`;
+    } else if (status === 'error') {
+        statusDiv.innerHTML = `<i class="bi bi-x-lg status-icon status-error"></i>`;
+    }
+}
+
+/**
+ * Gera e baixa um arquivo CSV com os dados dos leads que falharam.
+ * @param {Array} failedLeads - A lista de leads que falharam.
+ */
+function downloadFailedLeads(failedLeads) {
+    const headers = ['nome', 'sobrenome', 'email', 'telefone', 'nascimento', 'produto', 'comite', 'como_conheceu', 'tag', 'motivo_erro'];
+
+
+    const data = failedLeads.map(lead => {
+        // Para os campos de select/combo, usamos o texto original se disponível (upload), ou mapeamos o ID de volta para texto (bulk)
+        const produtoText = lead.produto || todosProdutos.find(p => p.id == lead.idProduto)?.text || lead.idProduto;
+        const comiteText = lead.comite || todasAiesecs.find(c => c.id == lead.idComite)?.text || lead.idComite;
+        const comoConheceuText = lead.como_conheceu || todasOpcoes_Como_Conheceu.find(c => c.id == lead.idCategoria)?.text || lead.idCategoria;
+
+        return [lead.nome, lead.sobrenome, lead.email, lead.telefone, lead.nascimento, produtoText, comiteText, comoConheceuText, lead.tag, lead.errorReason || 'N/A'];
+    });
+
+    const sheetData = [headers, ...data];
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    ws['!cols'] = [
+        { wch: 20 }, // nome
+        { wch: 20 }, // sobrenome
+        { wch: 30 }, // email
+        { wch: 15 }, // telefone
+        { wch: 12 }, // nascimento
+        { wch: 30 }, // produto
+        { wch: 45 }, // comite
+        { wch: 25 }, // como_conheceu
+        { wch: 20 }, // tag
+        { wch: 50 }  // motivo_erro
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Leads com Erro");
+    XLSX.writeFile(wb, "leads_com_erro.xlsx", { bookSST: true });
 }

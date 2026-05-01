@@ -346,12 +346,11 @@ h2 {
     font-size: 1rem;
     line-height: 1.6;
     color: #000000;
-    text-align: left;
     padding: 2rem;
     display: flex;
-    justify-content: center;
-    align-items: center;
     flex-direction: column;
+    justify-content: flex-start; /* Alinha o conteúdo no topo */
+    align-items: stretch; /* Estica os filhos para preencher a largura */
     background-color: #f8f9fa;
 }
 
@@ -532,6 +531,78 @@ button.loading::after {
     }
 }
 
+/* ============================================================================
+   MODAL DE PROCESSAMENTO EM MASSA
+   ----------------------------------------------------------------------------
+   Estilos para a lista de leads durante o envio em massa.
+   ============================================================================ */
+
+#bulk-processing-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    max-height: 60vh; /* Aumenta a altura máxima para ocupar mais espaço no modal */
+    overflow-y: auto;
+}
+
+#bulk-processing-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 5px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+#bulk-processing-list li:last-child {
+    border-bottom: none;
+}
+
+.lead-info {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lead-info .lead-name {
+    font-weight: 600;
+}
+
+.lead-info .lead-email {
+    color: #666;
+    font-size: 13px;
+    margin-left: 8px;
+}
+
+.lead-status {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin-left: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lead-status .spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: .2em;
+}
+
+.lead-status .status-icon {
+    font-size: 20px;
+}
+
+.lead-status .status-success {
+    color: #28a745; /* Verde */
+}
+
+.lead-status .status-error {
+    color: #dc3545; /* Vermelho */
+}
 
 /*
   Responsividade básica para centralizar melhor o aviso de copyright.
