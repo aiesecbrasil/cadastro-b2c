@@ -2532,16 +2532,15 @@ function downloadTemplate(format) {
 async function sendLead(data, internalId) {
     const leadIdentifier = data.emails?.[0]?.email || data.nome;
     try {
-        console.log(data)
         const response = await fetch("https://baziAiesec.pythonanywhere.com/adicionar-card-b2c", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
 
-        const responseText = await response.text();
+        const responseText = await response.json();
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${responseText}`);
+            throw new Error(responseText.error);
         }
 
         updateLeadStatusInModal(internalId, 'success');
