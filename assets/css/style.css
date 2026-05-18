@@ -4,7 +4,7 @@
 */
 body {
     font-family: 'Lato', sans-serif;
-    max-width: 650px;
+    max-width: 1200px;
     margin: 40px auto;
     background-color: #ffffff;
     padding: 30px;
@@ -233,7 +233,7 @@ h2 {
 
 #bulk-leads-table {
     width: 100%;
-    min-width: 900px; /* Força a tabela a ter uma largura mínima, ativando a rolagem */
+    /* min-width removido para a tabela se ajustar ao contêiner e evitar rolagem horizontal. */
     border-collapse: collapse;
     font-size: 14px;
 }
@@ -244,19 +244,18 @@ h2 {
     padding: 8px;
     text-align: left;
     vertical-align: middle;
-    min-width: 140px; /* Garante que as colunas não fiquem muito espremidas */
 }
 
 /* A coluna de ações pode ser menor */
 #bulk-leads-table th:last-child,
 #bulk-leads-table td:last-child {
-    min-width: 60px;
+    width: 50px; /* Largura reduzida para a coluna de ações */
     text-align: center;
 }
 
 #bulk-leads-table th {
     background-color: #f0f4f8;
-    white-space: nowrap; /* Impede que o texto do cabeçalho quebre */
+    /* white-space: nowrap removido para permitir quebra de linha nos cabeçalhos. */
 }
 
 #bulk-leads-table input {
