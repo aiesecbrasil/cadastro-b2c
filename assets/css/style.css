@@ -1,25 +1,31 @@
-/**
- * @file style.css
- * @description Folha de estilos principal da aplicação.
- * - Define o layout geral, tipografia, cores e estilos dos componentes.
- * - Inclui estilos para os modos de cadastro, modais e elementos de formulário.
- * - Organizado em seções para facilitar a manutenção.
- */
 body {
     font-family: 'Lato', sans-serif;
+    background-color: #f0f4f8;
+    /* Um fundo suave para a página inteira */
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+.main-container {
     max-width: 1200px;
     margin: 40px auto;
     background-color: #ffffff;
     padding: 30px;
     border-radius: 12px;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    min-height: 80vh;
 }
 
-/* ============================================================================
-   CONTROLE DE EXIBIÇÃO DOS STAGES (ETAPAS DO FORMULÁRIO)
-   ----------------------------------------------------------------------------
-   O formulário foi simplificado para um único stage, mas a estrutura foi mantida.
-   ============================================================================ */
+@media (max-width: 768px) {
+    .main-container {
+        margin: 10px;
+        padding: 15px;
+        box-shadow: none;
+        /* Remove a sombra em telas pequenas para um visual mais limpo */
+    }
+}
+
 .stage {
     display: none;
 }
@@ -28,7 +34,6 @@ body {
     display: block;
 }
 
-/* Título principal (atualmente não utilizado, mas mantido para referência) */
 h2 {
     text-align: center;
     color: #004a99;
@@ -38,12 +43,10 @@ h2 {
     font-weight: 600;
 }
 
-/* ============================================================================
-   GRUPO DE INPUT COM LABEL FLUTUANTE
-   ----------------------------------------------------------------------------
-   Componente de input com um label que se move para cima quando o campo
-   está focado ou preenchido, melhorando a UX.
-   ============================================================================ */
+/*
+  Agrupamento de inputs com label flutuante.
+  O label movimenta conforme o estado do input (focus/placeholder-shown).
+*/
 .input-group {
     position: relative;
     margin-bottom: 22px;
@@ -61,8 +64,6 @@ h2 {
 }
 
 .input-group input:not(#password) {
-    /* Garante que o border-radius seja aplicado mesmo quando sobrescrito por outras regras,
-       mantendo a consistência visual dos inputs. */
     border-radius: 10px !important;
 }
 
@@ -73,7 +74,6 @@ h2 {
     top: 27px;
     transform: translateY(-50%);
     padding: 0 4px;
-    background-color: #ffffff; /* Fundo para cobrir a borda do input ao flutuar */
     transition: 0.2s all;
     pointer-events: none;
 }
@@ -85,12 +85,10 @@ h2 {
     color: #0072ce;
 }
 
-/* ============================================================================
-   CAMPO MÚLTIPLO (PARA EMAILS E TELEFONES)
-   ----------------------------------------------------------------------------
-   Estrutura flexível para agrupar um seletor de tipo, um input e um botão
-   de remoção, permitindo adicionar múltiplos contatos.
-   ============================================================================ */
+/*
+  Bloco reutilizável para e-mails e telefones (select + input + botão remover).
+  Usa flex para alinhamento e wrap para responsividade.
+*/
 .campo-multiplo {
     display: flex;
     gap: 10px;
@@ -118,7 +116,6 @@ h2 {
     background-color: #fff;
 }
 
-/* Botões de "Adicionar" e "Remover" para os campos múltiplos */
 .add-btn,
 .remove-btn {
     padding: 6px 14px;
@@ -153,18 +150,16 @@ h2 {
     cursor: not-allowed;
 }
 
-/* Mensagem de erro padrão para os campos do formulário */
 .error-msg {
     color: #dc3545;
     font-size: 13px;
     margin-top: 4px;
 }
 
-/* ============================================================================
-   CAMPO DE CALENDÁRIO (DATA DE NASCIMENTO)
-   ----------------------------------------------------------------------------
-   Estilo para o input de data, com um ícone de calendário decorativo.
-   ============================================================================ */
+/*
+  Campo de data com ícone (apenas decorativo) posicionado absoluto.
+  A sincronização com o calendário é feita via JS (Pikaday).
+*/
 .input-calendario {
     position: relative;
     max-width: 100%;
@@ -189,11 +184,6 @@ h2 {
     pointer-events: none;
 }
 
-/* ============================================================================
-   INPUTS EXTRAS E CHECKBOX
-   ----------------------------------------------------------------------------
-   Estilos para campos dinâmicos (como selects) e o grupo de checkbox da política de privacidade.
-   ============================================================================ */
 .input-extra {
     margin-bottom: 22px;
 }
@@ -233,17 +223,14 @@ h2 {
     line-height: 1.4;
 }
 
-/* ============================================================================
-   ESTILOS GERAIS E DE ABAS
-   ----------------------------------------------------------------------------
-   Ajustes para o conteúdo das abas e o corpo do modal.
-   ============================================================================ */
 #DadosAqui {
     font-family: 'Lato', sans-serif;
     overflow-wrap: break-word;
-    /* Força a quebra de palavras longas para evitar overflow horizontal */
-    word-wrap: break-word; /* Fallback para navegadores mais antigos */
-    white-space: pre-line; /* Respeita as quebras de linha do texto, mas comprime múltiplos espaços */
+    /* força quebra */
+    word-wrap: break-word;
+    /* compatibilidade */
+    white-space: pre-line;
+    /* Isso faz com que múltiplos espaços e quebras de linha virem apenas um espaço */
 
 }
 
@@ -251,11 +238,7 @@ h2 {
     padding-top: 20px;
 }
 
-/* ============================================================================
-   MODO CADASTRO EM MASSA (TABELA)
-   ----------------------------------------------------------------------------
-   Estilos para a tabela de inserção manual de múltiplos leads.
-   ============================================================================ */
+/* Estilos para o modo de cadastro em massa e responsividade */
 .table-responsive-wrapper {
     overflow-x: auto;
     margin-top: 20px;
@@ -265,6 +248,7 @@ h2 {
 
 #bulk-leads-table {
     width: 100%;
+    /* min-width removido para a tabela se ajustar ao contêiner e evitar rolagem horizontal. */
     border-collapse: collapse;
     font-size: 14px;
 }
@@ -277,9 +261,11 @@ h2 {
     vertical-align: middle;
 }
 
+/* A coluna de ações pode ser menor */
 #bulk-leads-table th:last-child,
 #bulk-leads-table td:last-child {
-    width: 50px; /* Largura fixa para a coluna de ações (botão de remover) */
+    width: 50px;
+    /* Largura reduzida para a coluna de ações */
     text-align: center;
 }
 
@@ -293,21 +279,19 @@ h2 {
     border: none;
     padding: 4px;
     font-size: 14px;
-    background-color: transparent; /* Garante que o input se integre visualmente com a célula da tabela */
+    background-color: transparent;
+    /* Para melhor integração visual com a célula */
 }
 
-/* Ajuste para os componentes de combo dentro da tabela */
+/* Restaura a aparência dos inputs de combo dentro da tabela de massa */
 #bulk-leads-table .combo input {
     border: 1px solid #ccd6eb;
     background-color: #fff;
-    padding: 10px; /* Alinhamento com outros inputs */
+    padding: 10px;
+    /* Alinha com outros inputs do formulário */
 }
 
-/* ============================================================================
-   MODO UPLOAD DE ARQUIVO
-   ----------------------------------------------------------------------------
-   Estilos para a área de upload, incluindo instruções e resultados.
-   ============================================================================ */
+/* Estilos para o modo de upload de arquivo */
 #upload-instructions {
     background-color: #e9f7fe;
     border-left: 4px solid #0072ce;
@@ -322,7 +306,7 @@ h2 {
     border: 1px solid #e9ecef;
     border-radius: 4px;
     padding: 15px;
-    margin: 20px 0 0;
+    margin: 20px 0;
     font-size: 14px;
 }
 
@@ -346,6 +330,66 @@ h2 {
     font-size: 13px;
 }
 
+/* ============================================================================
+   NAVEGAÇÃO EM ABAS (MODOS DE CADASTRO)
+   ----------------------------------------------------------------------------
+   Estilos para os botões de navegação dos modos de cadastro.
+   ============================================================================ */
+.nav-tabs {
+    border-bottom: none;
+    /* Remove a linha inferior padrão do Bootstrap */
+    display: flex;
+    display: flex;
+    /* Ativa o Flexbox (coloca os itens na horizontal) */
+    justify-content: space-between;
+    /* Empurra um pra esquerda, um pro meio e um pra direita */
+    align-items: center;
+    /* Alinha os três verticalmente no centro da barra */
+
+    width: 100%;
+    /* Força a div a ocupar a largura total da tela */
+    gap: 15px;
+    /* Espaço entre os botões */
+    margin-bottom: 25px;
+    /* Espaço abaixo da navegação */
+    flex-wrap: wrap;
+    /* Permite que os botões quebrem a linha em telas menores */
+}
+
+.nav-tabs .nav-link {
+    /* Estilo de botão padrão (não selecionado) */
+    background-color: #f8f9fa;
+    /* Fundo cinza claro */
+    border: 2px solid #dee2e6;
+    /* Borda cinza claro */
+    color: #0072ce;
+    /* Texto azul AIESEC */
+    border-radius: 8px;
+    /* Bordas arredondadas */
+    padding: 10px 20px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin-bottom: 0;
+    /* Sobrescreve o padrão do Bootstrap */
+}
+
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+    border-color: #0072ce;
+    /* Borda fica azul no hover */
+    background-color: #e9f7fe;
+}
+
+.nav-tabs .nav-link.active {
+    /* Estilo do botão "pressionado" (ativo) */
+    background-color: #0072ce;
+    /* Fundo azul AIESEC */
+    color: #ffffff;
+    /* Texto branco */
+    border-color: #005a9e;
+    /* Borda azul mais escura */
+}
+
 #upload-results .success {
     color: #155724;
 }
@@ -354,13 +398,12 @@ h2 {
     color: #721c24;
 }
 
-/* ============================================================================
-   MODAL
-   ----------------------------------------------------------------------------
-   Ajustes de estilo para o modal de confirmação e processamento.
-   ============================================================================ */
+/*
+  Ajuste do modal Bootstrap para abrir mais abaixo (30% do topo).
+*/
 .modal {
-    top: 30%;
+    /* A posição vertical é controlada pelo Bootstrap para garantir a responsividade. 
+       Removida a regra 'top: 30%' que quebrava o layout em telas pequenas. */
 }
 
 .modal-backdrop {
@@ -373,6 +416,7 @@ h2 {
     color: #004a99;
     font-weight: 600;
     text-align: center;
+
 }
 
 .modal-body {
@@ -382,13 +426,15 @@ h2 {
     color: #000000;
     padding: 2rem;
     display: flex;
-    flex-direction: column; /* Organiza o conteúdo verticalmente */
-    justify-content: flex-start; /* Alinha no topo */
-    align-items: stretch; /* Estica os filhos para preencher a largura */
+    flex-direction: column;
+    justify-content: flex-start;
+    /* Alinha o conteúdo no topo */
+    align-items: stretch;
+    /* Estica os filhos para preencher a largura */
     background-color: #f8f9fa;
 }
 
-/* Estilos para inputs e listas dentro de componentes (como o combo) */
+
 input {
     width: 100%;
     padding: 10px;
@@ -404,7 +450,6 @@ ul {
     border: 1px solid #ccd6eb;
     border-radius: 8px;
     max-height: 150px;
-    position: absolute; /* Para que a lista não empurre o conteúdo abaixo */
     overflow-y: auto;
     background-color: #fff;
 }
@@ -440,11 +485,6 @@ li.active {
     cursor: pointer;
 }
 
-/* ============================================================================
-   BOTÕES DE NAVEGAÇÃO E AÇÃO
-   ----------------------------------------------------------------------------
-   Estilos para os botões "Próximo", "Anterior" e o indicador de progresso.
-   ============================================================================ */
 .prev:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -478,48 +518,13 @@ li.active {
 }
 
 /* ============================================================================
-   ESTILOS DAS ABAS DE NAVEGAÇÃO
-   ----------------------------------------------------------------------------
-   Transforma as abas padrão em botões com estado "pressionado".
-   ============================================================================ */
-
-.nav-tabs {
-    border-bottom: none;
-    gap: 8px; /* Espaço entre os botões */
-}
-
-.nav-tabs .nav-link {
-    border: 1px solid #ccd6eb;
-    border-radius: 8px !important; /* Garante o arredondamento */
-    background-color: #f8f9fa;
-    /* Fundo cinza claro para botões inativos */
-    color: #004a99;
-    /* Cor do texto (azul AIESEC) */
-    font-weight: 600;
-    margin-bottom: 0;
-    transition: all 0.2s ease-in-out;
-}
-
-/* Efeito ao passar o mouse sobre botões inativos */
-.nav-tabs .nav-link:not(.active):hover {
-    background-color: #e9ecef;
-    border-color: #adb5bd;
-}
-
-/* Estilo "pressionado" para o botão ativo */
-.nav-tabs .nav-link.active {
-    background-color: #0072ce;
-    /* Azul AIESEC mais vivo */
-    color: #ffffff;
-    /* Texto branco */
-    border-color: #005a9e;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
-    /* Sombra interna */
-}
-
-/* ============================================================================
    SPINNER DE CARREGAMENTO GLOBAL
+   ----------------------------------------------------------------------------
+   Este spinner pode ser utilizado tanto em modais ("Enviando dados...") quanto
+   dentro de botões (por exemplo, "Confirmar" → "Enviando...").
    ============================================================================ */
+
+/* Contêiner centralizado para o modal de carregamento */
 .spinner-container {
     display: flex;
     flex-direction: column;
@@ -528,6 +533,12 @@ li.active {
     gap: 10px;
     padding: 20px;
 }
+
+/* Spinner circular principal */
+/*
+  Spinner genérico independente do Bootstrap JS.
+  Pode ser usado no overlay global ou embutido em botões (ver .loading).
+*/
 .spinner-border {
     width: 3rem;
     height: 3rem;
@@ -557,6 +568,13 @@ li.active {
     }
 }
 
+/* ============================================================================
+   SPINNER EMBUTIDO EM BOTÕES
+   ----------------------------------------------------------------------------
+   Útil caso queira mostrar carregamento direto no botão "Confirmar".
+   Basta adicionar a classe .loading ao botão.
+   ============================================================================ */
+
 button.loading {
     position: relative;
     pointer-events: none;
@@ -578,17 +596,15 @@ button.loading::after {
     animation: spin 0.8s linear infinite;
 }
 
-/* Aviso de copyright no rodapé */
 .copyright {
     margin: 20px;
     position: relative;
-    left: 40%;
+    left: 33%;
     margin-top: 50px;
     color: #004a99;
     font-weight: 500;
 }
 
-/* Ajuste para botões de navegação em telas pequenas */
 @media (max-width: 767px) {
     .stage-buttons {
         flex-direction: column-reverse;
@@ -606,7 +622,8 @@ button.loading::after {
     padding: 0;
     margin: 0;
     width: 100%;
-    max-height: 60vh; /* Altura máxima para a lista de processamento */
+    max-height: 60vh;
+    /* Aumenta a altura máxima para ocupar mais espaço no modal */
     overflow-y: auto;
 }
 
@@ -670,14 +687,8 @@ button.loading::after {
     /* Vermelho */
 }
 
-/* Ajuste de responsividade para o copyright */
-@media (max-width: 768px) {
-    .copyright {
-        margin: 20px;
-        position: static; /* Remove o posicionamento relativo para centralizar com base no fluxo */
-        left: 15%;
-        margin-top: 50px;
-        color: #004a99;
-        font-weight: 500;
-    }
-}
+/*
+  Responsividade básica para centralizar melhor o aviso de copyright.
+*/
+/* A regra de responsividade para o copyright foi removida pois o novo estilo 
+   já é inerentemente responsivo e funciona em todas as larguras de tela. */
