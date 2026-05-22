@@ -2063,10 +2063,9 @@ async function processAndSendLeads(leads) {
 
     for (const lead of leads) {
         const { nome, sobrenome, email, telefone, nascimento, produto, comite, como_conheceu, tag, idProduto, idComite, idCategoria } = lead;
-
+        console.log(nome, sobrenome, email, telefone, nascimento, produto, comite, como_conheceu, tag, idProduto, idComite, idCategoria)
         const validationErrors = [];
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}$/;
-        const dataRegex = /^\d{2}\/\d{2}\/\d{4}$/;
 
         // 1. Valida todos os campos obrigatórios
         if (!nome) validationErrors.push('Nome é obrigatório.');
@@ -2076,16 +2075,33 @@ async function processAndSendLeads(leads) {
         } else if (!emailRegex.test(email)) {
             validationErrors.push('Email com formato inválido.');
         }
-        const telNumeros = telefone.replace(/\D/g, '');
+        const telNumeros = String(telefone || '').replace(/\D/g, '');
         if (telNumeros.length < 10 || telNumeros.length > 11) {
             validationErrors.push('Telefone inválido (deve ter 10 ou 11 dígitos).');
         }
-        if (!nascimento) {
-            validationErrors.push('Nascimento é obrigatório.');
-        } else if (!dataRegex.test(nascimento)) {
-            validationErrors.push('Data de nascimento inválida (use DD/MM/YYYY).');
-        }
+        // Validação e processamento de 'nascimento'
+        let nascimentoISO = null;
+        let nascimentoParaFalha = nascimento; // Mantém o valor original para o log de erro
 
+        if (nascimento instanceof Date && !isNaN(nascimento)) {
+            // É um objeto Date válido do XLSX
+            const day = String(nascimento.getDate()).padStart(2, '0');
+            const month = String(nascimento.getMonth() + 1).padStart(2, '0');
+            const year = nascimento.getFullYear();
+            nascimentoISO = `${year}-${month}-${day} 00:00:00`;
+            nascimentoParaFalha = `${day}/${month}/${year}`;
+        } else if (typeof nascimento === 'string' && nascimento.trim()) {
+            const nascimentoStr = nascimento.trim();
+            const dataRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+            if (dataRegex.test(nascimentoStr)) {
+                const [day, month, year] = nascimentoStr.split('/');
+                nascimentoISO = `${year}-${month}-${day} 00:00:00`;
+            } else {
+                validationErrors.push('Data de nascimento com formato inválido (use DD/MM/YYYY).');
+            }
+        } else {
+            validationErrors.push('Nascimento é obrigatório ou está em formato irreconhecível.');
+        }
         // 2. Valida e resolve IDs para formulário em massa (tem ID) e upload de arquivo (tem texto)
         let finalIdProduto, finalIdComite, finalIdCategoria;
         let nomeCLFinal = '';
@@ -2151,13 +2167,10 @@ async function processAndSendLeads(leads) {
         if (validationErrors.length > 0) {
             updateLeadStatusInModal(lead._internalId, 'error');
             lead.errorReason = validationErrors.join(' ');
+            lead.nascimento = nascimentoParaFalha;
             failed.push(lead);
             continue;
         }
-
-        // 4. Se a validação passar, prepara e envia os dados
-        const [day, month, year] = nascimento.split('/');
-        const nascimentoISO = `${year}-${month}-${day} 00:00:00`;
 
         const data = {
             nome,
@@ -2168,7 +2181,7 @@ async function processAndSendLeads(leads) {
             idComite: finalIdComite,
             idCategoria: finalIdCategoria,
             emails: [{ email: email, tipo: 'other' }],
-            telefones: [{ numero: telefone.replace(/\D/g, ''), tipo: 'other' }],
+            telefones: [{ numero: String(telefone || '').replace(/\D/g, ''), tipo: 'other' }],
             dataNascimento: nascimentoISO,
             idAutorizacao: "1",
         };
@@ -2257,10 +2270,10 @@ async function handleFileUpload(fileContent, fileType) {
     let dataRows = [];
 
     try {
-        const workbook = XLSX.read(fileContent, { type: 'array' });
+        const workbook = XLSX.read(fileContent, { type: 'array', cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        dataRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false });
+        dataRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
 
         if (dataRows.length < 2) { // Precisa de cabeçalho + pelo menos uma linha de dados
             throw new Error("O arquivo não contém dados para processar.");
@@ -2330,8 +2343,8 @@ async function handleFileUpload(fileContent, fileType) {
                 nome: (row[0] || '').trim(),
                 sobrenome: (row[1] || '').trim(),
                 email: (row[2] || '').trim(),
-                telefone: (row[3] || '').trim(),
-                nascimento: (row[4] || '').trim(),
+                telefone: (row[3] || ''),
+                nascimento: row[4],
                 produto: (row[5] || '').trim(),
                 comite: (row[6] || '').trim(),
                 como_conheceu: (row[7] || '').trim(),
@@ -2586,7 +2599,16 @@ function downloadFailedLeads(failedLeads) {
         const comiteText = lead.comite || todasAiesecs.find(c => c.id == lead.idComite)?.text || lead.idComite;
         const comoConheceuText = lead.como_conheceu || todasOpcoes_Como_Conheceu.find(c => c.id == lead.idCategoria)?.text || lead.idCategoria;
 
-        return [lead.nome, lead.sobrenome, lead.email, lead.telefone, lead.nascimento, produtoText, comiteText, comoConheceuText, lead.tag, lead.errorReason || 'N/A'];
+        let nascimentoText = lead.nascimento;
+        if (nascimentoText instanceof Date && !isNaN(nascimentoText)) {
+            const day = String(nascimentoText.getDate()).padStart(2, '0');
+            const month = String(nascimentoText.getMonth() + 1).padStart(2, '0');
+            const year = nascimentoText.getFullYear();
+            nascimentoText = `${day}/${month}/${year}`;
+        }
+
+
+        return [lead.nome, lead.sobrenome, lead.email, lead.telefone, nascimentoText, produtoText, comiteText, comoConheceuText, lead.tag, lead.errorReason || 'N/A'];
     });
 
     const sheetData = [headers, ...data];
