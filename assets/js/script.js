@@ -2063,7 +2063,6 @@ async function processAndSendLeads(leads) {
 
     for (const lead of leads) {
         const { nome, sobrenome, email, telefone, nascimento, produto, comite, como_conheceu, tag, idProduto, idComite, idCategoria } = lead;
-        console.log(nome, sobrenome, email, telefone, nascimento, produto, comite, como_conheceu, tag, idProduto, idComite, idCategoria)
         const validationErrors = [];
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z]{2,}$/;
 
