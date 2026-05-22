@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
     <!--
-      Documento HTML principal do formulário de cadastro de cards.
-      Estrutura semântica com componentes dinâmicos renderizados via assets/js/script.js.
-      Manter este arquivo minimalista: a lógica está toda no JS; o estilo, no CSS.
-      Acessibilidade: labels associados por for/id, mensagens de erro próximas aos campos.
+      @file index.html
+      @description Estrutura principal (HTML) da aplicação de cadastro.
+      - Define a navegação em abas para os três modos de cadastro: Individual, Em Massa e Upload.
+      - Utiliza o sistema de abas do Bootstrap 5 para a navegação e exibição de conteúdo.
+      - A aba "Cadastro Individual" possui contêineres vazios que são preenchidos dinamicamente pelo JavaScript (ui.js).
+      - As abas "Cadastro em Massa" e "Upload de Arquivo" têm sua estrutura principal definida estaticamente para um carregamento mais rápido.
+      - Acessibilidade (a11y) é uma prioridade, com o uso de atributos ARIA para descrever papéis, estados e relações entre os elementos.
     -->
     <head>
         <meta charset="UTF-8">
         <title>Formulário de Cadastro - AIESEC</title>
         <!--
-          Dependências externas:
-          - Pikaday: componente de calendário (apenas CSS aqui, JS no fim do body)
-          - Bootstrap 5: layout do modal e utilidades
+          Dependências de Estilo (CSS)
         -->
         <link rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css">
@@ -30,17 +31,18 @@
             href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
             rel="stylesheet">
         <link rel="stylesheet" href="./assets/css/style.css">
+        <!-- Meta tag para responsividade -->
         <meta name="viewport"
             content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <!--
-          Notas:
-          - Os campos de Produto, AIESEC e Como conheceu podem ser criados dinamicamente, dependendo de parâmetros UTM.
-          - Não remover comentários existentes; as anotações abaixo apenas complementam a documentação.
-        -->
     </head>
 
     <body>
-        <!-- Estrutura de Abas para os modos de cadastro -->
+        <!-- 
+          Navegação em Abas (Tabs)
+          - Controla a exibição dos diferentes painéis de modo de cadastro.
+          - Utiliza atributos `data-bs-toggle="tab"` e `data-bs-target` do Bootstrap.
+          - Atributos ARIA (`role`, `aria-controls`, `aria-selected`) informam tecnologias assistivas sobre a função e o estado das abas.
+        -->
         <ul class="nav nav-tabs" id="form-modes" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="individual-tab"
@@ -62,9 +64,18 @@
             </li>
         </ul>
 
-        <!-- Conteúdo das Abas -->
+        <!-- 
+          Contêiner de Conteúdo das Abas
+          - Cada `div.tab-pane` corresponde a uma aba da navegação.
+          - A classe `active` e `show` determina qual painel está visível.
+          - Atributos ARIA (`role`, `aria-labelledby`) associam o painel à sua respectiva aba.
+        -->
         <div class="tab-content" id="form-modes-content">
-            <!-- Aba 1: Cadastro Individual (Formulário existente) -->
+            <!-- 
+              Painel 1: Cadastro Individual
+              - Contém o formulário principal para adicionar um único lead.
+              - A maioria dos campos complexos (selects, combos) são inseridos aqui dinamicamente pelo JavaScript.
+            -->
             <div class="tab-pane fade show active" id="individual-panel"
                 role="tabpanel" aria-labelledby="individual-tab">
                 <div class="progress" id="progress">Formulário de Cadastro -
@@ -72,8 +83,14 @@
                 <form id="meuForm"
                     aria-describedby="erro-nome erro-sobrenome erro-email erro-telefone erro-nascimento erro-politica">
 
+                    <!-- O formulário é contido em um único "stage" para simplicidade -->
                     <div class="stage active" data-stage="1">
-                        <!-- Nome e Sobrenome -->
+                        <!-- 
+                          Campos de Nome e Sobrenome
+                          - Usam o componente `input-group` com label flutuante.
+                          - `aria-required="true"` indica que o campo é obrigatório.
+                          - `aria-describedby` associa o input ao seu respectivo elemento de mensagem de erro.
+                        -->
                         <div class="row">
                             <div class="col-12 col-md-6">
                                 <div class="input-group">
@@ -103,7 +120,11 @@
                             </div>
                         </div>
 
-                        <!-- Emails -->
+                        <!-- 
+                          Campos Dinâmicos (Email, Telefone)
+                          - Os contêineres abaixo (`#emails-container`, `#telefones-container`) são preenchidos
+                            pelo JavaScript (`addEmail`, `addTelefone` em ui.js) com campos de input e select.
+                        -->
                         <label for="emails-container">Email *</label>
                         <div id="emails-container"
                             aria-describedby="erro-email"></div>
@@ -114,7 +135,7 @@
                         <div class="error-msg" id="erro-email" role="alert"
                             aria-live="polite"></div>
 
-                        <!-- Telefones -->
+                        <!-- Contêiner para campos de telefone dinâmicos -->
                         <label for="telefones-container">Telefone *</label>
                         <div id="telefones-container"
                             aria-describedby="erro-telefone"></div>
@@ -125,7 +146,11 @@
                         <div class="error-msg" id="erro-telefone" role="alert"
                             aria-live="polite"></div>
 
-                        <!-- Data de nascimento -->
+                        <!-- 
+                          Campo de Data de Nascimento
+                          - O input visível (`#nascimento`) é para a interação do usuário e é aprimorado com o calendário Pikaday.
+                          - O input oculto (`#nascimento-iso`) armazena a data no formato ISO (YYYY-MM-DD) para envio à API.
+                        -->
                         <label for="nascimento">Data de Nascimento *</label>
                         <div class="input-calendario">
                             <input type="text" id="nascimento"
@@ -139,16 +164,20 @@
                         <div class="error-msg" id="erro-nascimento"
                             role="alert"
                             aria-live="polite"></div>
-                        <!-- Produto -->
+                        
+                        <!-- 
+                          Contêineres para Combos Dinâmicos
+                          - Estes `div`s são preenchidos pela função `criarCampos` em `ui.js`,
+                            que constrói os componentes de combobox para Produto, Comitê e Como Conheceu.
+                        -->
                         <div id="produtos" class="input-extra"></div>
-
-                        <!-- AIESEC mais próxima -->
                         <div id="aiesecs" class="input-extra"></div>
-
-                        <!-- Como conheceu -->
                         <div id="conheceAiesec" class="input-extra"></div>
 
-                        <!-- Campo de Tag -->
+                        <!-- 
+                          Campo de Tag (Opcional)
+                          - Um campo de texto simples para adicionar uma tag de identificação ao lead.
+                        -->
                         <div class="input-group">
                             <input type="text" id="tag" placeholder=" " />
                             <label for="tag">Tag (Opcional)</label>
@@ -156,7 +185,10 @@
                                 aria-live="polite"></span>
                         </div>
 
-                        <!-- Checkbox Política de Privacidade -->
+                        <!-- 
+                          Checkbox de Política de Privacidade
+                          - Campo obrigatório para conformidade com a LGPD.
+                        -->
                         <div class="input-extra checkbox-group">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="politica"
@@ -182,6 +214,10 @@
                                 aria-live="polite"></div>
                         </div>
                     </div>
+                    <!-- 
+                      Controles do Formulário
+                      - Botão principal para submeter os dados do cadastro individual.
+                    -->
                     <div class="stage-controls">
                         <button class="next" type="button"
                             id="btn-next">Enviar</button>
@@ -189,21 +225,81 @@
                 </form>
             </div>
 
-            <!-- Aba 2: Cadastro em Massa -->
+            <!-- 
+              Painel 2: Cadastro em Massa (Tabela)
+              - Permite a inserção manual de múltiplos leads em uma tabela.
+              - O corpo da tabela (`tbody`) é preenchido dinamicamente por `addBulkLeadRow` em `ui.js`.
+            -->
             <div class="tab-pane fade" id="bulk-panel" role="tabpanel"
                 aria-labelledby="bulk-tab">
-                <!-- Conteúdo gerado via JavaScript -->
+                <h3>Cadastro em Massa</h3>
+                <p>Adicione múltiplos leads manualmente. Todos os campos com *
+                    são obrigatórios.</p>
+                <div class="table-responsive-wrapper">
+                    <table id="bulk-leads-table">
+                        <thead>
+                            <tr>
+                                <th>Nome *</th>
+                                <th>Sobrenome *</th>
+                                <th>Email *</th>
+                                <th>Telefone *</th>
+                                <th>Nascimento *</th>
+                                <th>Produto *</th>
+                                <th>Comitê *</th>
+                                <th>Como Conheceu *</th>
+                                <th>Tag</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <button type="button" id="add-bulk-lead" class="add-btn mt-3">Adicionar Lead</button>
+                <button type="button" id="submit-bulk-leads" class="next mt-3">Enviar Todos</button>
+                <div id="bulk-results" class="upload-results mt-4"></div>
             </div>
 
-            <!-- Aba 3: Upload de Arquivo -->
+            <!-- 
+              Painel 3: Upload de Arquivo
+              - Fornece instruções e uma interface para fazer o upload de um arquivo .xls ou .xlsx.
+              - Inclui um link para um modelo do Google Sheets.
+            -->
             <div class="tab-pane fade" id="upload-panel" role="tabpanel"
                 aria-labelledby="upload-tab">
-                <!-- Conteúdo gerado via JavaScript -->
+                <h3>Upload de Arquivo (.xls, .xlsx)</h3>
+                <div id="upload-instructions">
+                    <p>Faça o upload de um arquivo. A primeira linha deve ser o
+                        cabeçalho e a ordem das colunas deve ser:
+                        <strong>nome,sobrenome,email,telefone,nascimento,produto,comite,como_conheceu,tag</strong></p>
+                    <p>Os campos "Produto", "Comitê" e "Como Conheceu" no
+                        arquivo de modelo terão uma lista de opções para
+                        selecionar. Formato da data: DD/MM/YYYY.</p>
+                    <p>Em caso de erro, reenvie apenas os leads que
+                        apresentaram falha, para evitar duplicidades no pódio.</p>
+                </div>
+                <div id="template-download-area">
+                    <p>Não tem um modelo? acesse o link abaixo:</p>
+                    <button type="button" class="btn btn-info btn-sm"
+                        id="access-template-btn">Acessar Online (Google
+                        Sheets)</button>
+                </div>
+                <label for="file-upload-input"></label>
+                <input type="file" id="file-upload-input" accept=".xls, .xlsx"
+                    class="form-control" title="Selecione um arquivo de upload">
+                <button type="button" id="submit-file-upload" class="next mt-3">Enviar Arquivo</button>
+                <div id="upload-results" class="upload-results"></div>
             </div>
         </div>
 
-        <span class="copyright">&copy; AIESEC no Brasil - 2026</span>
-        <!-- Modal -->
+        <span class="copyright">&copy; AIESEC no Brasil - 2024</span>
+        
+        <!-- 
+          Modal Genérico
+          - Estrutura de um modal do Bootstrap que é reutilizada em toda a aplicação.
+          - O conteúdo (título, corpo, botões) é preenchido dinamicamente pelas funções `showModal`
+            e `updateOpenModal` em `ui.js`.
+          - `aria-labelledby` e `aria-hidden` são importantes para a acessibilidade.
+        -->
         <div class="modal fade" id="exampleModalLong" tabindex="-1"
             aria-labelledby="exampleModalLongTitle" aria-hidden="true">
             <div class="modal-dialog modal-lg">
@@ -229,13 +325,24 @@
             </div>
         </div>
 
-        <!-- JS externos carregados ao final para não bloquear a renderização -->
+        <!-- 
+          Scripts
+          - Carregados no final do `<body>` para não bloquear a renderização do conteúdo da página.
+          - A ordem de carregamento é importante devido às dependências entre os arquivos.
+        -->
+        <!-- Bibliotecas Externas -->
         <script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
         <script
             src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
             integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
             crossorigin="anonymous"></script>
+        
+        <!-- Scripts da Aplicação (em ordem de dependência) -->
+        <script src="./assets/js/utils.js"></script>
+        <script src="./assets/js/api.js"></script>
+        <script src="./assets/js/ui.js"></script>
+        <script src="./assets/js/processing.js"></script>
         <script src="./assets/js/script.js"></script>
     </body>
 
