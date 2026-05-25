@@ -548,7 +548,7 @@ async function processAndSendLeads(leads) {
 
         const data = {
             nome, sobrenome, tag: slugify(tag || ''),
-            nomeCL: nomeCLFinal,
+            nomeCL: nomeCLFinal.replace(/AIESEC\s+(em|no|na)\s+/i, '').replace(/unidade\s+/i, '').replace(/são paulo\s+/i, '').trim().toLowerCase(),
             idProduto: finalIdProduto,
             idComite: finalIdComite,
             idCategoria: finalIdCategoria,
@@ -557,7 +557,6 @@ async function processAndSendLeads(leads) {
             dataNascimento: nascimentoISO,
             idAutorizacao: "1",
         };
-
         const result = await sendLead(data, lead._internalId);
         if (result.success) {
             successful.push(lead);
